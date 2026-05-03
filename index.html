@@ -204,348 +204,146 @@
 
 <script>
     // ── CONFIG ──────────────────────────────────────────────
-    const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
-    const SB_KEY = 'YOUR_SUPABASE_ANON_KEY'; // ← paste your eyJ... key here
-    const _supabase = supabase.createClient(SB_URL, SB_KEY);
-    let charts = {};
+const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
+const SB_KEY = 'YOUR_SUPABASE_ANON_KEY'; 
+const _supabase = supabase.createClient(SB_URL, SB_KEY);
+let charts = {};
 
-    // ── COLUMN DEFINITIONS ──────────────────────────────────
-    // These define exactly which columns map to CSV headers
-    const plansColumns = ['workshop_name','date','month','region','quarter','owner','instructor','payment_type','comments'];
-    const scoopsColumns = ['title','date','status'];
-    const newslettersColumns = ['month','content','owner'];
-    const revenueColumns = ['partner_name','region','amount'];
+// ── COLUMN DEFINITIONS ──────────────────────────────────
+const plansColumns = ['workshop_name','date','month','region','quarter','owner','instructor','payment_type','comments'];
+const scoopsColumns = ['title','date','status'];
+const newslettersColumns = ['month','content','owner'];
+const revenueColumns = ['partner_name','region','amount'];
 
-    // ── TEMPLATE DEFINITIONS ────────────────────────────────
-    const templates = {
-        plans: {
-            filename: 'workshop_plans_template.csv',
-            headers: plansColumns,
-            example: ['Presales Workshop Example','2026-06-01','June','SEA','Q2','Murtaza','John Doe','Free','Sample comment']
-        },
-        scoops: {
-            filename: 'scoops_template.csv',
-            headers: scoopsColumns,
-            example: ['Example Scoop Title','2026-06-01','Scheduled']
-        },
-        newsletters: {
-            filename: 'newsletters_template.csv',
-            headers: newslettersColumns,
-            example: ['June 2026','AI in Procurement','Namrata']
-        },
-        revenue: {
-            filename: 'training_revenue_template.csv',
-            headers: revenueColumns,
-            example: ['Acme Corp','ANZ','5000']
-        }
-    };
+const templates = {
+    plans: { filename: 'workshop_plans_template.csv', headers: plansColumns, example: ['Presales Workshop','2026-06-01','June','SEA','Q2','Murtaza','John Doe','Free','Notes'] },
+    scoops: { filename: 'scoops_template.csv', headers: scoopsColumns, example: ['Monthly Scoop','2026-06-05','Scheduled'] },
+    newsletters: { filename: 'newsletters_template.csv', headers: newslettersColumns, example: ['May 2026','Feature Updates','Namrata'] },
+    revenue: { filename: 'revenue_template.csv', headers: revenueColumns, example: ['Partner A','ANZ','15000'] }
+};
 
-    // ── TOAST ───────────────────────────────────────────────
-    function showToast(msg, type = 'success') {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className = type;
-        t.style.display = 'block';
-        setTimeout(() => { t.style.display = 'none'; }, 4000);
-    }
+// ── BULK DOWNLOAD / EXPORT ───────────────────────────────
+async function downloadData(table, columns, filename) {
+    showToast('Fetching data for export...', 'info');
+    const { data, error } = await _supabase.from(table).select('*').order('id', { ascending: true });
+    
+    if (error) { showToast('Export failed: ' + error.message, 'error'); return; }
+    if (!data || data.length === 0) { showToast('No data found to export.', 'info'); return; }
 
-    // ── TAB SWITCHING ────────────────────────────────────────
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
-            document.getElementById(this.dataset.tab).classList.add('active');
-            this.classList.add('nav-active');
-            refreshData();
-        });
-    });
+    const csvContent = toCSV(data, columns);
+    triggerDownload(`${filename}_${new Date().toISOString().slice(0,10)}.csv`, csvContent);
+    showToast(`Exported ${data.length} rows successfully!`);
+}
 
-    // ── DATE → MONTH ─────────────────────────────────────────
-    document.getElementById('p_date').addEventListener('change', function () {
-        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-        document.getElementById('p_month').value = this.value ? months[new Date(this.value).getUTCMonth()] : '';
-    });
-
-    // ── CSV UTILITIES ────────────────────────────────────────
-    function parseCSV(text) {
-        const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
-        if (lines.length < 2) return { headers: [], rows: [] };
-        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase().replace(/ /g,'_'));
-        const rows = lines.slice(1).map(line => {
-            // Handle quoted commas
-            const cols = [];
-            let current = '';
-            let inQuotes = false;
-            for (let ch of line) {
-                if (ch === '"') { inQuotes = !inQuotes; }
-                else if (ch === ',' && !inQuotes) { cols.push(current.trim()); current = ''; }
-                else { current += ch; }
+function toCSV(data, columns) {
+    const headerRow = columns.join(',');
+    const rows = data.map(row => 
+        columns.map(col => {
+            let val = row[col] === null || row[col] === undefined ? '' : String(row[col]);
+            // Escape quotes and wrap in quotes if comma exists
+            if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                val = `"${val.replace(/"/g, '""')}"`;
             }
-            cols.push(current.trim());
-            const obj = {};
-            headers.forEach((h, i) => { obj[h] = (cols[i] || '').replace(/^"|"$/g, ''); });
-            return obj;
-        });
-        return { headers, rows };
-    }
+            return val;
+        }).join(',')
+    );
+    return [headerRow, ...rows].join('\n');
+}
 
-    function toCSV(data, columns) {
-        const header = columns.join(',');
-        const rows = data.map(row =>
-            columns.map(col => {
-                const val = row[col] !== null && row[col] !== undefined ? String(row[col]) : '';
-                return val.includes(',') ? `"${val}"` : val;
-            }).join(',')
-        );
-        return [header, ...rows].join('\n');
-    }
+// ── BULK UPLOAD ──────────────────────────────────────────
+async function handleBulkUpload(table, input, expectedColumns) {
+    const file = input.files[0];
+    if (!file) return;
 
-    function triggerDownload(filename, csvContent) {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
+    const tabKey = table === 'workshop_plans' ? 'plans' : table === 'training_revenue' ? 'revenue' : table;
+    const progressFill = document.getElementById(tabKey + 'ProgressFill');
+    const progressBar = document.getElementById(tabKey + 'Progress');
 
-    // ── DOWNLOAD TEMPLATE ────────────────────────────────────
-    function downloadTemplate(tab) {
-        const t = templates[tab];
-        const csv = [t.headers.join(','), t.example.join(',')].join('\n');
-        triggerDownload(t.filename, csv);
-        showToast('Template downloaded!', 'info');
-    }
+    progressBar.style.display = 'block';
+    progressFill.style.width = '10%';
 
-    // ── EXPORT / DOWNLOAD DATA ───────────────────────────────
-    async function downloadData(table, columns, filename) {
-        showToast('Preparing export...', 'info');
-        const { data, error } = await _supabase.from(table).select('*').order('id', { ascending: true });
-        if (error) { showToast('Export failed: ' + error.message, 'error'); return; }
-        if (!data || data.length === 0) { showToast('No data to export.', 'info'); return; }
-        triggerDownload(`${filename}_${today()}.csv`, toCSV(data, columns));
-        showToast(`Exported ${data.length} rows!`);
-    }
-
-    function today() {
-        return new Date().toISOString().slice(0,10);
-    }
-
-    // ── BULK UPLOAD ──────────────────────────────────────────
-    async function handleBulkUpload(table, input, expectedColumns) {
-        const file = input.files[0];
-        if (!file) return;
-
-        const tabKey = { workshop_plans: 'plans', scoops: 'scoops', newsletters: 'newsletters', training_revenue: 'revenue' }[table];
-        const progressBar = document.getElementById(tabKey + 'Progress');
-        const progressFill = document.getElementById(tabKey + 'ProgressFill');
-
-        progressBar.style.display = 'block';
-        progressFill.style.width = '10%';
-
+    try {
         const text = await file.text();
         const { headers, rows } = parseCSV(text);
 
-        if (rows.length === 0) {
-            showToast('CSV is empty or invalid.', 'error');
-            progressBar.style.display = 'none';
-            input.value = '';
-            return;
-        }
-
-        // Validate headers
+        // Validation
         const missing = expectedColumns.filter(c => !headers.includes(c));
         if (missing.length > 0) {
-            showToast(`Missing columns: ${missing.join(', ')}. Download the template first.`, 'error');
-            progressBar.style.display = 'none';
-            input.value = '';
-            return;
+            throw new Error(`Missing columns: ${missing.join(', ')}`);
         }
 
-        // Filter to only expected columns, skip empty rows
-        const cleaned = rows
-            .filter(r => Object.values(r).some(v => v !== ''))
-            .map(r => {
-                const obj = {};
-                expectedColumns.forEach(c => { obj[c] = r[c] || null; });
-                // Convert amount to number for revenue
-                if (obj.amount !== null && obj.amount !== undefined) obj.amount = parseFloat(obj.amount) || 0;
-                return obj;
+        // Clean and Format Data
+        const cleanedData = rows.filter(r => Object.values(r).some(v => v !== '')).map(r => {
+            const obj = {};
+            expectedColumns.forEach(c => {
+                let val = r[c] || null;
+                if (c === 'amount') val = parseFloat(val) || 0;
+                obj[c] = val;
             });
-
-        progressFill.style.width = '40%';
-        showToast(`Uploading ${cleaned.length} rows...`, 'info');
-
-        // Upload in batches of 50
-        const batchSize = 50;
-        let uploaded = 0;
-        let failed = 0;
-
-        for (let i = 0; i < cleaned.length; i += batchSize) {
-            const batch = cleaned.slice(i, i + batchSize);
-            const { error } = await _supabase.from(table).insert(batch);
-            if (error) {
-                console.error('Batch error:', error);
-                failed += batch.length;
-            } else {
-                uploaded += batch.length;
-            }
-            progressFill.style.width = Math.round(40 + ((i + batchSize) / cleaned.length) * 60) + '%';
-        }
-
-        progressFill.style.width = '100%';
-        setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 1000);
-
-        if (failed > 0) {
-            showToast(`Done: ${uploaded} uploaded, ${failed} failed. Check console.`, 'error');
-        } else {
-            showToast(`Successfully uploaded ${uploaded} rows!`);
-        }
-
-        input.value = '';
-        refreshData();
-    }
-
-    // ── INSERT: PLAN ─────────────────────────────────────────
-    async function insertPlan() {
-        const name = document.getElementById('p_name').value.trim();
-        const date = document.getElementById('p_date').value;
-        if (!name) { showToast('Please enter a workshop name.', 'error'); return; }
-        if (!date) { showToast('Please select a date.', 'error'); return; }
-        const btn = document.getElementById('savePlanBtn');
-        btn.disabled = true; btn.textContent = 'Saving...';
-        const entry = {
-            workshop_name: name, date, month: document.getElementById('p_month').value,
-            region: document.getElementById('p_region').value, quarter: document.getElementById('p_quarter').value,
-            owner: document.getElementById('p_owner').value, instructor: document.getElementById('p_instructor').value.trim(),
-            payment_type: document.getElementById('p_type').value, comments: document.getElementById('p_comments').value.trim()
-        };
-        const { error } = await _supabase.from('workshop_plans').insert([entry]).select();
-        btn.disabled = false; btn.textContent = 'Save Plan';
-        if (error) { showToast('Error: ' + error.message, 'error'); }
-        else {
-            showToast('Workshop plan saved!');
-            ['p_name','p_instructor','p_comments'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('p_date').value = ''; document.getElementById('p_month').value = '';
-            refreshData();
-        }
-    }
-
-    // ── INSERT: SCOOP ────────────────────────────────────────
-    async function insertScoop() {
-        const title = document.getElementById('s_title').value.trim();
-        const date = document.getElementById('s_date').value;
-        if (!title) { showToast('Please enter a scoop title.', 'error'); return; }
-        if (!date) { showToast('Please select a date.', 'error'); return; }
-        const btn = document.getElementById('saveScoopBtn');
-        btn.disabled = true; btn.textContent = 'Saving...';
-        const { error } = await _supabase.from('scoops').insert([{ title, date, status: document.getElementById('s_status').value }]).select();
-        btn.disabled = false; btn.textContent = 'Add Scoop';
-        if (error) { showToast('Error: ' + error.message, 'error'); }
-        else { showToast('Scoop added!'); document.getElementById('s_title').value = ''; document.getElementById('s_date').value = ''; refreshData(); }
-    }
-
-    // ── INSERT: NEWSLETTER ───────────────────────────────────
-    async function insertNewsletter() {
-        const month = document.getElementById('n_month').value.trim();
-        const content = document.getElementById('n_content').value.trim();
-        if (!month || !content) { showToast('Please fill in Month and Content Focus.', 'error'); return; }
-        const btn = document.getElementById('saveNewsBtn');
-        btn.disabled = true; btn.textContent = 'Saving...';
-        const { error } = await _supabase.from('newsletters').insert([{ month, content, owner: document.getElementById('n_owner').value }]).select();
-        btn.disabled = false; btn.textContent = 'Post Update';
-        if (error) { showToast('Error: ' + error.message, 'error'); }
-        else { showToast('Newsletter posted!'); document.getElementById('n_month').value = ''; document.getElementById('n_content').value = ''; refreshData(); }
-    }
-
-    // ── INSERT: REVENUE ──────────────────────────────────────
-    async function insertRevenue() {
-        const partner = document.getElementById('r_partner').value.trim();
-        const amount = document.getElementById('r_amount').value;
-        if (!partner) { showToast('Please enter a partner name.', 'error'); return; }
-        if (!amount || isNaN(amount)) { showToast('Please enter a valid amount.', 'error'); return; }
-        const btn = document.getElementById('saveRevBtn');
-        btn.disabled = true; btn.textContent = 'Saving...';
-        const { error } = await _supabase.from('training_revenue').insert([{ partner_name: partner, region: document.getElementById('r_region').value, amount: parseFloat(amount) }]).select();
-        btn.disabled = false; btn.textContent = 'Log Revenue';
-        if (error) { showToast('Error: ' + error.message, 'error'); }
-        else { showToast('Revenue logged!'); document.getElementById('r_partner').value = ''; document.getElementById('r_amount').value = ''; refreshData(); }
-    }
-
-    // ── DELETE ───────────────────────────────────────────────
-    async function handleDelete(table, id) {
-        if (!confirm('Delete this entry?')) return;
-        const { data, error } = await _supabase.from(table).delete().eq('id', parseInt(id, 10)).select();
-        if (error) { showToast('Delete failed: ' + error.message, 'error'); }
-        else if (!data || data.length === 0) { showToast('Nothing deleted — check Supabase RLS policies.', 'error'); }
-        else { showToast('Entry deleted.'); refreshData(); }
-    }
-
-    // ── REFRESH ALL DATA ─────────────────────────────────────
-    async function refreshData() {
-        try {
-            const [{ data: plans, error: e1 }, { data: scoops, error: e2 }, { data: news, error: e3 }, { data: rev, error: e4 }] = await Promise.all([
-                _supabase.from('workshop_plans').select('*').order('date', { ascending: true }),
-                _supabase.from('scoops').select('*').order('date', { ascending: true }),
-                _supabase.from('newsletters').select('*'),
-                _supabase.from('training_revenue').select('*')
-            ]);
-
-            if (e1 || e2 || e3 || e4) console.error('Fetch errors:', e1, e2, e3, e4);
-
-            document.getElementById('plansTableBody').innerHTML = (plans && plans.length) ? plans.map(p => `
-                <tr>
-                    <td>${p.workshop_name||''}</td><td>${p.date||''}</td><td>${p.month||'-'}</td>
-                    <td>${p.region||''}</td><td>${p.quarter||''}</td><td>${p.owner||''}</td>
-                    <td>${p.instructor||'-'}</td><td>${p.payment_type||''}</td><td>${p.comments||'-'}</td>
-                    <td><button class="delete-btn" onclick="handleDelete('workshop_plans','${p.id}')">Delete</button></td>
-                </tr>`).join('') : '<tr><td colspan="10" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
-
-            document.getElementById('scoopsTableBody').innerHTML = (scoops && scoops.length) ? scoops.map(s => `
-                <tr>
-                    <td>${s.title||''}</td><td>${s.date||''}</td><td>${s.status||''}</td>
-                    <td><button class="delete-btn" onclick="handleDelete('scoops','${s.id}')">Delete</button></td>
-                </tr>`).join('') : '<tr><td colspan="4" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
-
-            document.getElementById('newslettersTableBody').innerHTML = (news && news.length) ? news.map(n => `
-                <tr>
-                    <td>${n.month||''}</td><td>${n.content||''}</td><td>${n.owner||''}</td>
-                    <td><button class="delete-btn" onclick="handleDelete('newsletters','${n.id}')">Delete</button></td>
-                </tr>`).join('') : '<tr><td colspan="4" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
-
-            let totalRev = 0;
-            document.getElementById('revenueTableBody').innerHTML = (rev && rev.length) ? rev.map(r => {
-                totalRev += Number(r.amount) || 0;
-                return `<tr>
-                    <td>${r.partner_name||''}</td><td>${r.region||''}</td><td>$${Number(r.amount).toLocaleString()}</td>
-                    <td><button class="delete-btn" onclick="handleDelete('training_revenue','${r.id}')">Delete</button></td>
-                </tr>`;
-            }).join('') : '<tr><td colspan="4" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
-
-            document.getElementById('revTotal').textContent = '$' + totalRev.toLocaleString();
-
-            const owners = ['Murtaza','Namrata','Sukhada','Junko'];
-            updateChart('plansChart','bar', owners, owners.map(o => (plans||[]).filter(p => p.owner===o).length), '#0050D1');
-            updateChart('scoopsChart','doughnut',['Scheduled','Sent'],['Scheduled','Sent'].map(st => (scoops||[]).filter(s => s.status===st).length),['#bfdbfe','#0050D1']);
-            const regions = ['ANZ','India','Japan','SEA'];
-            updateChart('revChart','line', regions, regions.map(r => (rev||[]).filter(v => v.region===r).reduce((a,c) => a+Number(c.amount),0)),'#10b981');
-
-        } catch (err) { console.error('refreshData error:', err); }
-    }
-
-    function updateChart(id, type, labels, data, color) {
-        const canvas = document.getElementById(id);
-        if (!canvas) return;
-        if (charts[id]) charts[id].destroy();
-        charts[id] = new Chart(canvas.getContext('2d'), {
-            type,
-            data: { labels, datasets: [{ data, backgroundColor: color, borderColor: Array.isArray(color) ? '#fff' : color, tension: 0.4, fill: false }] },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: type==='doughnut', position: 'bottom' } }, scales: { y: { display: type!=='doughnut', beginAtZero: true }, x: { display: type!=='doughnut' } } }
+            return obj;
         });
-    }
 
-    window.addEventListener('load', refreshData);
+        // Batch Upload (50 rows/batch)
+        const batchSize = 50;
+        for (let i = 0; i < cleanedData.length; i += batchSize) {
+            const batch = cleanedData.slice(i, i + batchSize);
+            const { error } = await _supabase.from(table).insert(batch);
+            if (error) throw error;
+            
+            const pct = Math.round(((i + batch.length) / cleanedData.length) * 90) + 10;
+            progressFill.style.width = pct + '%';
+        }
+
+        showToast(`Successfully uploaded ${cleanedData.length} records!`);
+        refreshData();
+    } catch (err) {
+        showToast(err.message, 'error');
+        console.error('Upload Error:', err);
+    } finally {
+        setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 2000);
+        input.value = '';
+    }
+}
+
+// Robust CSV Parser for quoted strings
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/);
+    if (lines.length < 2) return { headers: [], rows: [] };
+
+    const parseLine = (line) => {
+        const result = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"' && line[i+1] === '"') { cur += '"'; i++; }
+            else if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
+            else cur += char;
+        }
+        result.push(cur.trim());
+        return result;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/ /g, '_'));
+    const rows = lines.slice(1).filter(l => l.trim()).map(line => {
+        const values = parseLine(line);
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = values[i]);
+        return obj;
+    });
+    return { headers, rows };
+}
+
+// Utility to Trigger Browser Download
+function triggerDownload(filename, content) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 </script>
 </body>
 </html>
