@@ -8,205 +8,544 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
         :root { --coupa-blue: #0050D1; }
         body { font-family: 'Poppins', sans-serif; font-weight: 300; background: #fdfdfe; color: #1e293b; }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .glass { background: rgba(255,255,255,0.8); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.4); }
         .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
         label { font-size: 0.7rem; font-weight: 500; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.25rem; display: block; }
-        input, select, textarea { font-size: 0.85rem !important; padding: 0.8rem 1rem !important; border-radius: 0.85rem !important; border: 1px solid #f1f5f9 !important; background: #ffffff !important; }
-        
-        .nav-btn { transition: all 0.3s ease; color: #64748b; font-weight: 400; }
-        .nav-active { background: var(--coupa-blue) !important; color: white !important; box-shadow: 0 10px 20px -5px rgba(0, 80, 209, 0.3); }
-        
+        input, select, textarea { font-size: 0.85rem !important; padding: 0.8rem 1rem !important; border-radius: 0.85rem !important; border: 1px solid #e2e8f0 !important; background: #ffffff !important; width: 100%; box-sizing: border-box; }
+        .nav-btn { transition: all 0.3s ease; color: #64748b; font-weight: 400; cursor: pointer; border: none; background: transparent; }
+        .nav-active { background: var(--coupa-blue) !important; color: white !important; box-shadow: 0 10px 20px -5px rgba(0,80,209,0.3); }
         th { font-size: 0.65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 1rem; border-bottom: 2px solid #f8fafc; }
         td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #f8fafc; }
-        .delete-btn { color: #ef4444; cursor: pointer; font-weight: bold; background: #fee2e2; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; }
+        .delete-btn { color: #ef4444; cursor: pointer; font-weight: bold; background: #fee2e2; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; border: none; }
+        .delete-btn:hover { background: #fecaca; }
+        .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; }
+        .save-btn:hover { background: #0041b0; }
+        .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .bulk-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 0.75rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border: none; transition: all 0.2s; }
+        .upload-btn { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+        .upload-btn:hover { background: #e0f2fe; }
+        .download-btn { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .download-btn:hover { background: #dcfce7; }
+        .template-btn { background: #fafafa; color: #64748b; border: 1px solid #e2e8f0; }
+        .template-btn:hover { background: #f1f5f9; }
+        #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 500; z-index: 9999; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #toast.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        #toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        #toast.info { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 1rem; padding: 1.5rem; text-align: center; transition: all 0.2s; cursor: pointer; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: #0050D1; background: #eff6ff; }
+        .drop-zone input[type=file] { display: none; }
+        .progress-bar { height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 0.5rem; display: none; }
+        .progress-bar-fill { height: 100%; background: #0050D1; border-radius: 99px; transition: width 0.3s ease; width: 0%; }
     </style>
 </head>
 <body class="p-6 md:p-14">
 
-    <div class="max-w-[1500px] mx-auto">
-        <header class="mb-14 flex justify-between items-center">
-            <div>
-                <h1 class="text-5xl font-semibold text-[#0050D1] tracking-tight">Coupa <span class="font-light text-slate-400">x Partner Page</span></h1>
-                <p class="text-slate-400 text-lg font-light mt-2 italic">Partner on a page</p>
-            </div>
-        </header>
+<div id="toast"></div>
 
-        <nav class="glass rounded-full p-1.5 flex gap-1 mb-14 w-fit border border-slate-100">
-            <button onclick="switchTab(event, 'insights')" class="nav-btn nav-active px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Global Insights</button>
-            <button onclick="switchTab(event, 'plans')" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Workshop Plans</button>
-            <button onclick="switchTab(event, 'scoops')" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Scoops</button>
-            <button onclick="switchTab(event, 'newsletters')" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Newsletters</button>
-            <button onclick="switchTab(event, 'revenue')" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Training Revenue</button>
-        </nav>
+<div class="max-w-[1500px] mx-auto">
+    <header class="mb-14">
+        <h1 class="text-5xl font-semibold text-[#0050D1] tracking-tight">Coupa <span class="font-light text-slate-400">x Partner Page</span></h1>
+        <p class="text-slate-400 text-lg font-light mt-2 italic">Partner on a page</p>
+    </header>
 
-        <div id="insights" class="tab-content active space-y-10">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Workshop Ownership</h3>
-                    <div class="h-64"><canvas id="plansChart"></canvas></div>
-                </div>
-                <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Communication Status</h3>
-                    <div class="h-64"><canvas id="scoopsChart"></canvas></div>
-                </div>
-                <div class="glass p-8 rounded-[2.5rem] flex flex-col justify-center items-center text-center">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Total Partner Revenue</h3>
-                    <h2 id="revTotal" class="text-7xl font-light text-[#0050D1] tracking-tighter">$0</h2>
-                    <div class="w-full mt-8 h-32"><canvas id="revChart"></canvas></div>
-                </div>
-            </div>
-        </div>
+    <nav class="glass rounded-full p-1.5 flex gap-1 mb-14 w-fit border border-slate-100">
+        <button data-tab="insights" class="nav-btn nav-active px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Global Insights</button>
+        <button data-tab="plans" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Workshop Plans</button>
+        <button data-tab="scoops" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Scoops</button>
+        <button data-tab="newsletters" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Newsletters</button>
+        <button data-tab="revenue" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Training Revenue</button>
+    </nav>
 
-        <div id="plans" class="tab-content space-y-8">
-            <div class="glass p-10 rounded-[2.5rem]">
-                <h2 class="text-2xl font-light mb-8">Register Workshop Plan</h2>
-                <form onsubmit="handleInsert('workshop_plans', event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="md:col-span-2"><label>Presales Workshop</label><input type="text" name="workshop_name" required class="w-full"></div>
-                    <div><label>Date</label><input type="date" name="date" required class="w-full" id="dateInput"></div>
-                    <div><label>Month</label><input type="text" name="month" id="monthDisplay" readonly class="w-full bg-slate-50"></div>
-                    <div><label>Region</label><select name="region" class="w-full"><option>SEA</option><option>ANZ</option><option>Japan</option><option>Other</option></select></div>
-                    <div><label>Quarter</label><select name="quarter" class="w-full"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
-                    <div><label>Owner</label><select name="owner" required class="w-full"><option>Murtaza</option><option>Namrata</option><option>Sukhada</option><option>Junko</option></select></div>
-                    <div><label>Instructor</label><input type="text" name="instructor" class="w-full"></div>
-                    <div><label>Type</label><select name="payment_type" class="w-full"><option>Free</option><option>Paid</option></select></div>
-                    <div class="md:col-span-2"><label>Comments</label><textarea name="comments" rows="1" class="w-full"></textarea></div>
-                    <div class="md:col-span-1 pt-6"><button type="submit" class="w-full py-3.5 bg-[#0050D1] text-white rounded-2xl font-medium text-xs tracking-widest uppercase">Save Plan</button></div>
-                </form>
+    <!-- INSIGHTS -->
+    <div id="insights" class="tab-content active space-y-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Workshop Ownership</h3>
+                <div class="h-64"><canvas id="plansChart"></canvas></div>
             </div>
-            <div class="glass rounded-[2.5rem] overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50/50">
-                        <tr><th>Presales Workshop</th><th>Date</th><th>Month</th><th>Region</th><th>Quarter</th><th>Owner</th><th>Instructor</th><th>Type</th><th>Comments</th><th>Action</th></tr>
-                    </thead>
-                    <tbody id="plansTableBody"></tbody>
-                </table>
+            <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Communication Status</h3>
+                <div class="h-64"><canvas id="scoopsChart"></canvas></div>
             </div>
-        </div>
-
-        <div id="scoops" class="tab-content space-y-8">
-            <div class="glass p-10 rounded-[2.5rem]">
-                <h2 class="text-2xl font-light mb-8">Log Scoop</h2>
-                <form onsubmit="handleInsert('scoops', event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" name="title" placeholder="Scoop Title" required class="md:col-span-2">
-                    <input type="date" name="date" required>
-                    <select name="status"><option>Scheduled</option><option>Sent</option></select>
-                    <button type="submit" class="bg-[#0050D1] text-white rounded-2xl uppercase text-xs tracking-widest">Add Scoop</button>
-                </form>
+            <div class="glass p-8 rounded-[2.5rem] flex flex-col justify-center items-center text-center">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Total Partner Revenue</h3>
+                <h2 id="revTotal" class="text-7xl font-light text-[#0050D1] tracking-tighter">$0</h2>
+                <div class="w-full mt-8 h-32"><canvas id="revChart"></canvas></div>
             </div>
-            <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Title</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="scoopsTableBody"></tbody></table></div>
-        </div>
-
-        <div id="newsletters" class="tab-content space-y-8">
-            <div class="glass p-10 rounded-[2.5rem]">
-                <h2 class="text-2xl font-light mb-8">Newsletters</h2>
-                <form onsubmit="handleInsert('newsletters', event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="text" name="month" placeholder="Month (e.g. May 2026)" required>
-                    <input type="text" name="content" placeholder="Content Focus" required>
-                    <select name="owner"><option>Namrata</option><option>Sukhada</option><option>Junko</option></select>
-                    <button type="submit" class="bg-[#0050D1] text-white rounded-2xl uppercase text-xs tracking-widest">Post Update</button>
-                </form>
-            </div>
-            <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Month</th><th>Focus</th><th>Owner</th><th>Action</th></tr></thead><tbody id="newslettersTableBody"></tbody></table></div>
-        </div>
-
-        <div id="revenue" class="tab-content space-y-8">
-            <div class="glass p-10 rounded-[2.5rem]">
-                <h2 class="text-2xl font-light mb-8 text-emerald-600">Revenue Entry</h2>
-                <form onsubmit="handleInsert('training_revenue', event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" name="partner_name" placeholder="Partner Name" required>
-                    <select name="region"><option>ANZ</option><option>India</option><option>Japan</option><option>SEA</option></select>
-                    <input type="number" name="amount" placeholder="Amount ($)" required>
-                    <button type="submit" class="bg-emerald-600 text-white rounded-2xl uppercase text-xs tracking-widest">Log Revenue</button>
-                </form>
-            </div>
-            <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Partner</th><th>Region</th><th>Amount</th><th>Action</th></tr></thead><tbody id="revenueTableBody"></tbody></table></div>
         </div>
     </div>
 
-    <script>
-        const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
-        const SB_KEY = 'sb_publishable_AUr69b_s74CdhSrWaIp_cw_4ElibRVY';
-        const _supabase = supabase.createClient(SB_URL, SB_KEY);
-        let charts = {};
+    <!-- WORKSHOP PLANS -->
+    <div id="plans" class="tab-content space-y-8">
+        <!-- Bulk Actions Bar -->
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
+            <button class="bulk-btn template-btn" onclick="downloadTemplate('plans')">⬇ Download Template</button>
+            <label class="bulk-btn upload-btn" for="plansUpload">⬆ Upload CSV
+                <input type="file" id="plansUpload" accept=".csv" onchange="handleBulkUpload('workshop_plans', this, plansColumns)">
+            </label>
+            <button class="bulk-btn download-btn" onclick="downloadData('workshop_plans', plansColumns, 'workshop_plans')">⬇ Export CSV</button>
+            <div id="plansProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="plansProgressFill"></div></div>
+        </div>
 
-        document.getElementById('dateInput').addEventListener('change', function() {
-            if(!this.value) return;
-            const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-            document.getElementById('monthDisplay').value = months[new Date(this.value).getMonth()];
-        });
+        <div class="glass p-10 rounded-[2.5rem]">
+            <h2 class="text-2xl font-light mb-8">Register Workshop Plan</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="md:col-span-2"><label>Presales Workshop</label><input type="text" id="p_name" placeholder="Workshop name"></div>
+                <div><label>Date</label><input type="date" id="p_date"></div>
+                <div><label>Month</label><input type="text" id="p_month" readonly style="background:#f8fafc !important;"></div>
+                <div><label>Region</label><select id="p_region"><option>SEA</option><option>ANZ</option><option>Japan</option><option>Other</option></select></div>
+                <div><label>Quarter</label><select id="p_quarter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
+                <div><label>Owner</label><select id="p_owner"><option>Murtaza</option><option>Namrata</option><option>Sukhada</option><option>Junko</option></select></div>
+                <div><label>Instructor</label><input type="text" id="p_instructor" placeholder="Instructor name"></div>
+                <div><label>Type</label><select id="p_type"><option>Free</option><option>Paid</option></select></div>
+                <div class="md:col-span-2"><label>Comments</label><textarea id="p_comments" rows="2"></textarea></div>
+                <div class="md:col-span-1 flex items-end"><button id="savePlanBtn" class="save-btn" onclick="insertPlan()">Save Plan</button></div>
+            </div>
+        </div>
+        <div class="glass rounded-[2.5rem] overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50/50"><tr><th>Workshop</th><th>Date</th><th>Month</th><th>Region</th><th>Quarter</th><th>Owner</th><th>Instructor</th><th>Type</th><th>Comments</th><th>Action</th></tr></thead>
+                <tbody id="plansTableBody"><tr><td colspan="10" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
 
-        function switchTab(evt, tabName) {
+    <!-- SCOOPS -->
+    <div id="scoops" class="tab-content space-y-8">
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
+            <button class="bulk-btn template-btn" onclick="downloadTemplate('scoops')">⬇ Download Template</button>
+            <label class="bulk-btn upload-btn" for="scoopsUpload">⬆ Upload CSV
+                <input type="file" id="scoopsUpload" accept=".csv" onchange="handleBulkUpload('scoops', this, scoopsColumns)">
+            </label>
+            <button class="bulk-btn download-btn" onclick="downloadData('scoops', scoopsColumns, 'scoops')">⬇ Export CSV</button>
+            <div id="scoopsProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="scoopsProgressFill"></div></div>
+        </div>
+        <div class="glass p-10 rounded-[2.5rem]">
+            <h2 class="text-2xl font-light mb-8">Log Scoop</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="md:col-span-2"><label>Scoop Title</label><input type="text" id="s_title" placeholder="Scoop title"></div>
+                <div><label>Date</label><input type="date" id="s_date"></div>
+                <div><label>Status</label><select id="s_status"><option>Scheduled</option><option>Sent</option></select></div>
+                <div class="md:col-span-1 flex items-end"><button id="saveScoopBtn" class="save-btn" onclick="insertScoop()">Add Scoop</button></div>
+            </div>
+        </div>
+        <div class="glass rounded-[2.5rem] overflow-hidden">
+            <table class="w-full text-left">
+                <thead><tr><th>Title</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="scoopsTableBody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEWSLETTERS -->
+    <div id="newsletters" class="tab-content space-y-8">
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
+            <button class="bulk-btn template-btn" onclick="downloadTemplate('newsletters')">⬇ Download Template</button>
+            <label class="bulk-btn upload-btn" for="newsUpload">⬆ Upload CSV
+                <input type="file" id="newsUpload" accept=".csv" onchange="handleBulkUpload('newsletters', this, newslettersColumns)">
+            </label>
+            <button class="bulk-btn download-btn" onclick="downloadData('newsletters', newslettersColumns, 'newsletters')">⬇ Export CSV</button>
+            <div id="newslettersProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="newslettersProgressFill"></div></div>
+        </div>
+        <div class="glass p-10 rounded-[2.5rem]">
+            <h2 class="text-2xl font-light mb-8">Newsletters</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div><label>Month</label><input type="text" id="n_month" placeholder="e.g. May 2026"></div>
+                <div class="md:col-span-2"><label>Content Focus</label><input type="text" id="n_content" placeholder="Content focus"></div>
+                <div><label>Owner</label><select id="n_owner"><option>Namrata</option><option>Sukhada</option><option>Junko</option></select></div>
+                <div class="flex items-end"><button id="saveNewsBtn" class="save-btn" onclick="insertNewsletter()">Post Update</button></div>
+            </div>
+        </div>
+        <div class="glass rounded-[2.5rem] overflow-hidden">
+            <table class="w-full text-left">
+                <thead><tr><th>Month</th><th>Focus</th><th>Owner</th><th>Action</th></tr></thead>
+                <tbody id="newslettersTableBody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- REVENUE -->
+    <div id="revenue" class="tab-content space-y-8">
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
+            <button class="bulk-btn template-btn" onclick="downloadTemplate('revenue')">⬇ Download Template</button>
+            <label class="bulk-btn upload-btn" for="revUpload">⬆ Upload CSV
+                <input type="file" id="revUpload" accept=".csv" onchange="handleBulkUpload('training_revenue', this, revenueColumns)">
+            </label>
+            <button class="bulk-btn download-btn" onclick="downloadData('training_revenue', revenueColumns, 'training_revenue')">⬇ Export CSV</button>
+            <div id="revenueProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="revenueProgressFill"></div></div>
+        </div>
+        <div class="glass p-10 rounded-[2.5rem]">
+            <h2 class="text-2xl font-light mb-8 text-emerald-600">Revenue Entry</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div><label>Partner Name</label><input type="text" id="r_partner" placeholder="Partner name"></div>
+                <div><label>Region</label><select id="r_region"><option>ANZ</option><option>India</option><option>Japan</option><option>SEA</option></select></div>
+                <div><label>Amount ($)</label><input type="number" id="r_amount" placeholder="0"></div>
+                <div class="flex items-end"><button id="saveRevBtn" class="save-btn" style="background:#059669;" onclick="insertRevenue()">Log Revenue</button></div>
+            </div>
+        </div>
+        <div class="glass rounded-[2.5rem] overflow-hidden">
+            <table class="w-full text-left">
+                <thead><tr><th>Partner</th><th>Region</th><th>Amount</th><th>Action</th></tr></thead>
+                <tbody id="revenueTableBody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── CONFIG ──────────────────────────────────────────────
+    const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
+    const SB_KEY = 'YOUR_SUPABASE_ANON_KEY'; // ← paste your eyJ... key here
+    const _supabase = supabase.createClient(SB_URL, SB_KEY);
+    let charts = {};
+
+    // ── COLUMN DEFINITIONS ──────────────────────────────────
+    // These define exactly which columns map to CSV headers
+    const plansColumns = ['workshop_name','date','month','region','quarter','owner','instructor','payment_type','comments'];
+    const scoopsColumns = ['title','date','status'];
+    const newslettersColumns = ['month','content','owner'];
+    const revenueColumns = ['partner_name','region','amount'];
+
+    // ── TEMPLATE DEFINITIONS ────────────────────────────────
+    const templates = {
+        plans: {
+            filename: 'workshop_plans_template.csv',
+            headers: plansColumns,
+            example: ['Presales Workshop Example','2026-06-01','June','SEA','Q2','Murtaza','John Doe','Free','Sample comment']
+        },
+        scoops: {
+            filename: 'scoops_template.csv',
+            headers: scoopsColumns,
+            example: ['Example Scoop Title','2026-06-01','Scheduled']
+        },
+        newsletters: {
+            filename: 'newsletters_template.csv',
+            headers: newslettersColumns,
+            example: ['June 2026','AI in Procurement','Namrata']
+        },
+        revenue: {
+            filename: 'training_revenue_template.csv',
+            headers: revenueColumns,
+            example: ['Acme Corp','ANZ','5000']
+        }
+    };
+
+    // ── TOAST ───────────────────────────────────────────────
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = type;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    // ── TAB SWITCHING ────────────────────────────────────────
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
-            document.getElementById(tabName).classList.add('active');
-            evt.currentTarget.classList.add('nav-active');
+            document.getElementById(this.dataset.tab).classList.add('active');
+            this.classList.add('nav-active');
+            refreshData();
+        });
+    });
+
+    // ── DATE → MONTH ─────────────────────────────────────────
+    document.getElementById('p_date').addEventListener('change', function () {
+        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        document.getElementById('p_month').value = this.value ? months[new Date(this.value).getUTCMonth()] : '';
+    });
+
+    // ── CSV UTILITIES ────────────────────────────────────────
+    function parseCSV(text) {
+        const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) return { headers: [], rows: [] };
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase().replace(/ /g,'_'));
+        const rows = lines.slice(1).map(line => {
+            // Handle quoted commas
+            const cols = [];
+            let current = '';
+            let inQuotes = false;
+            for (let ch of line) {
+                if (ch === '"') { inQuotes = !inQuotes; }
+                else if (ch === ',' && !inQuotes) { cols.push(current.trim()); current = ''; }
+                else { current += ch; }
+            }
+            cols.push(current.trim());
+            const obj = {};
+            headers.forEach((h, i) => { obj[h] = (cols[i] || '').replace(/^"|"$/g, ''); });
+            return obj;
+        });
+        return { headers, rows };
+    }
+
+    function toCSV(data, columns) {
+        const header = columns.join(',');
+        const rows = data.map(row =>
+            columns.map(col => {
+                const val = row[col] !== null && row[col] !== undefined ? String(row[col]) : '';
+                return val.includes(',') ? `"${val}"` : val;
+            }).join(',')
+        );
+        return [header, ...rows].join('\n');
+    }
+
+    function triggerDownload(filename, csvContent) {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // ── DOWNLOAD TEMPLATE ────────────────────────────────────
+    function downloadTemplate(tab) {
+        const t = templates[tab];
+        const csv = [t.headers.join(','), t.example.join(',')].join('\n');
+        triggerDownload(t.filename, csv);
+        showToast('Template downloaded!', 'info');
+    }
+
+    // ── EXPORT / DOWNLOAD DATA ───────────────────────────────
+    async function downloadData(table, columns, filename) {
+        showToast('Preparing export...', 'info');
+        const { data, error } = await _supabase.from(table).select('*').order('id', { ascending: true });
+        if (error) { showToast('Export failed: ' + error.message, 'error'); return; }
+        if (!data || data.length === 0) { showToast('No data to export.', 'info'); return; }
+        triggerDownload(`${filename}_${today()}.csv`, toCSV(data, columns));
+        showToast(`Exported ${data.length} rows!`);
+    }
+
+    function today() {
+        return new Date().toISOString().slice(0,10);
+    }
+
+    // ── BULK UPLOAD ──────────────────────────────────────────
+    async function handleBulkUpload(table, input, expectedColumns) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const tabKey = { workshop_plans: 'plans', scoops: 'scoops', newsletters: 'newsletters', training_revenue: 'revenue' }[table];
+        const progressBar = document.getElementById(tabKey + 'Progress');
+        const progressFill = document.getElementById(tabKey + 'ProgressFill');
+
+        progressBar.style.display = 'block';
+        progressFill.style.width = '10%';
+
+        const text = await file.text();
+        const { headers, rows } = parseCSV(text);
+
+        if (rows.length === 0) {
+            showToast('CSV is empty or invalid.', 'error');
+            progressBar.style.display = 'none';
+            input.value = '';
+            return;
+        }
+
+        // Validate headers
+        const missing = expectedColumns.filter(c => !headers.includes(c));
+        if (missing.length > 0) {
+            showToast(`Missing columns: ${missing.join(', ')}. Download the template first.`, 'error');
+            progressBar.style.display = 'none';
+            input.value = '';
+            return;
+        }
+
+        // Filter to only expected columns, skip empty rows
+        const cleaned = rows
+            .filter(r => Object.values(r).some(v => v !== ''))
+            .map(r => {
+                const obj = {};
+                expectedColumns.forEach(c => { obj[c] = r[c] || null; });
+                // Convert amount to number for revenue
+                if (obj.amount !== null && obj.amount !== undefined) obj.amount = parseFloat(obj.amount) || 0;
+                return obj;
+            });
+
+        progressFill.style.width = '40%';
+        showToast(`Uploading ${cleaned.length} rows...`, 'info');
+
+        // Upload in batches of 50
+        const batchSize = 50;
+        let uploaded = 0;
+        let failed = 0;
+
+        for (let i = 0; i < cleaned.length; i += batchSize) {
+            const batch = cleaned.slice(i, i + batchSize);
+            const { error } = await _supabase.from(table).insert(batch);
+            if (error) {
+                console.error('Batch error:', error);
+                failed += batch.length;
+            } else {
+                uploaded += batch.length;
+            }
+            progressFill.style.width = Math.round(40 + ((i + batchSize) / cleaned.length) * 60) + '%';
+        }
+
+        progressFill.style.width = '100%';
+        setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 1000);
+
+        if (failed > 0) {
+            showToast(`Done: ${uploaded} uploaded, ${failed} failed. Check console.`, 'error');
+        } else {
+            showToast(`Successfully uploaded ${uploaded} rows!`);
+        }
+
+        input.value = '';
+        refreshData();
+    }
+
+    // ── INSERT: PLAN ─────────────────────────────────────────
+    async function insertPlan() {
+        const name = document.getElementById('p_name').value.trim();
+        const date = document.getElementById('p_date').value;
+        if (!name) { showToast('Please enter a workshop name.', 'error'); return; }
+        if (!date) { showToast('Please select a date.', 'error'); return; }
+        const btn = document.getElementById('savePlanBtn');
+        btn.disabled = true; btn.textContent = 'Saving...';
+        const entry = {
+            workshop_name: name, date, month: document.getElementById('p_month').value,
+            region: document.getElementById('p_region').value, quarter: document.getElementById('p_quarter').value,
+            owner: document.getElementById('p_owner').value, instructor: document.getElementById('p_instructor').value.trim(),
+            payment_type: document.getElementById('p_type').value, comments: document.getElementById('p_comments').value.trim()
+        };
+        const { error } = await _supabase.from('workshop_plans').insert([entry]).select();
+        btn.disabled = false; btn.textContent = 'Save Plan';
+        if (error) { showToast('Error: ' + error.message, 'error'); }
+        else {
+            showToast('Workshop plan saved!');
+            ['p_name','p_instructor','p_comments'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('p_date').value = ''; document.getElementById('p_month').value = '';
             refreshData();
         }
+    }
 
-        async function handleInsert(table, e) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const entry = Object.fromEntries(formData.entries());
-            const { error } = await _supabase.from(table).insert([entry]);
-            if (error) alert(error.message); else { e.target.reset(); refreshData(); }
-        }
+    // ── INSERT: SCOOP ────────────────────────────────────────
+    async function insertScoop() {
+        const title = document.getElementById('s_title').value.trim();
+        const date = document.getElementById('s_date').value;
+        if (!title) { showToast('Please enter a scoop title.', 'error'); return; }
+        if (!date) { showToast('Please select a date.', 'error'); return; }
+        const btn = document.getElementById('saveScoopBtn');
+        btn.disabled = true; btn.textContent = 'Saving...';
+        const { error } = await _supabase.from('scoops').insert([{ title, date, status: document.getElementById('s_status').value }]).select();
+        btn.disabled = false; btn.textContent = 'Add Scoop';
+        if (error) { showToast('Error: ' + error.message, 'error'); }
+        else { showToast('Scoop added!'); document.getElementById('s_title').value = ''; document.getElementById('s_date').value = ''; refreshData(); }
+    }
 
-        async function handleDelete(table, id) {
-            if (!confirm("Delete this entry?")) return;
-            const { error } = await _supabase.from(table).delete().eq('id', id);
-            if (error) alert(error.message); else refreshData();
-        }
+    // ── INSERT: NEWSLETTER ───────────────────────────────────
+    async function insertNewsletter() {
+        const month = document.getElementById('n_month').value.trim();
+        const content = document.getElementById('n_content').value.trim();
+        if (!month || !content) { showToast('Please fill in Month and Content Focus.', 'error'); return; }
+        const btn = document.getElementById('saveNewsBtn');
+        btn.disabled = true; btn.textContent = 'Saving...';
+        const { error } = await _supabase.from('newsletters').insert([{ month, content, owner: document.getElementById('n_owner').value }]).select();
+        btn.disabled = false; btn.textContent = 'Post Update';
+        if (error) { showToast('Error: ' + error.message, 'error'); }
+        else { showToast('Newsletter posted!'); document.getElementById('n_month').value = ''; document.getElementById('n_content').value = ''; refreshData(); }
+    }
 
-        async function refreshData() {
-            const { data: plans } = await _supabase.from('workshop_plans').select('*').order('date', { ascending: true });
-            const { data: scoops } = await _supabase.from('scoops').select('*');
-            const { data: news } = await _supabase.from('newsletters').select('*');
-            const { data: rev } = await _supabase.from('training_revenue').select('*');
+    // ── INSERT: REVENUE ──────────────────────────────────────
+    async function insertRevenue() {
+        const partner = document.getElementById('r_partner').value.trim();
+        const amount = document.getElementById('r_amount').value;
+        if (!partner) { showToast('Please enter a partner name.', 'error'); return; }
+        if (!amount || isNaN(amount)) { showToast('Please enter a valid amount.', 'error'); return; }
+        const btn = document.getElementById('saveRevBtn');
+        btn.disabled = true; btn.textContent = 'Saving...';
+        const { error } = await _supabase.from('training_revenue').insert([{ partner_name: partner, region: document.getElementById('r_region').value, amount: parseFloat(amount) }]).select();
+        btn.disabled = false; btn.textContent = 'Log Revenue';
+        if (error) { showToast('Error: ' + error.message, 'error'); }
+        else { showToast('Revenue logged!'); document.getElementById('r_partner').value = ''; document.getElementById('r_amount').value = ''; refreshData(); }
+    }
 
-            // --- Tables Rendering ---
-            document.getElementById('plansTableBody').innerHTML = plans?.map(p => `<tr><td>${p.workshop_name}</td><td>${p.date}</td><td>${p.month || '-'}</td><td>${p.region}</td><td>${p.quarter}</td><td>${p.owner}</td><td>${p.instructor || '-'}</td><td>${p.payment_type}</td><td>${p.comments || ''}</td><td><button class="delete-btn" onclick="handleDelete('workshop_plans', '${p.id}')">Delete</button></td></tr>`).join('') || '';
-            document.getElementById('scoopsTableBody').innerHTML = scoops?.map(s => `<tr><td>${s.title}</td><td>${s.date}</td><td>${s.status}</td><td><button class="delete-btn" onclick="handleDelete('scoops', '${s.id}')">Delete</button></td></tr>`).join('') || '';
-            document.getElementById('newslettersTableBody').innerHTML = news?.map(n => `<tr><td>${n.month}</td><td>${n.content}</td><td>${n.owner}</td><td><button class="delete-btn" onclick="handleDelete('newsletters', '${n.id}')">Delete</button></td></tr>`).join('') || '';
-            
+    // ── DELETE ───────────────────────────────────────────────
+    async function handleDelete(table, id) {
+        if (!confirm('Delete this entry?')) return;
+        const { data, error } = await _supabase.from(table).delete().eq('id', parseInt(id, 10)).select();
+        if (error) { showToast('Delete failed: ' + error.message, 'error'); }
+        else if (!data || data.length === 0) { showToast('Nothing deleted — check Supabase RLS policies.', 'error'); }
+        else { showToast('Entry deleted.'); refreshData(); }
+    }
+
+    // ── REFRESH ALL DATA ─────────────────────────────────────
+    async function refreshData() {
+        try {
+            const [{ data: plans, error: e1 }, { data: scoops, error: e2 }, { data: news, error: e3 }, { data: rev, error: e4 }] = await Promise.all([
+                _supabase.from('workshop_plans').select('*').order('date', { ascending: true }),
+                _supabase.from('scoops').select('*').order('date', { ascending: true }),
+                _supabase.from('newsletters').select('*'),
+                _supabase.from('training_revenue').select('*')
+            ]);
+
+            if (e1 || e2 || e3 || e4) console.error('Fetch errors:', e1, e2, e3, e4);
+
+            document.getElementById('plansTableBody').innerHTML = (plans && plans.length) ? plans.map(p => `
+                <tr>
+                    <td>${p.workshop_name||''}</td><td>${p.date||''}</td><td>${p.month||'-'}</td>
+                    <td>${p.region||''}</td><td>${p.quarter||''}</td><td>${p.owner||''}</td>
+                    <td>${p.instructor||'-'}</td><td>${p.payment_type||''}</td><td>${p.comments||'-'}</td>
+                    <td><button class="delete-btn" onclick="handleDelete('workshop_plans','${p.id}')">Delete</button></td>
+                </tr>`).join('') : '<tr><td colspan="10" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
+
+            document.getElementById('scoopsTableBody').innerHTML = (scoops && scoops.length) ? scoops.map(s => `
+                <tr>
+                    <td>${s.title||''}</td><td>${s.date||''}</td><td>${s.status||''}</td>
+                    <td><button class="delete-btn" onclick="handleDelete('scoops','${s.id}')">Delete</button></td>
+                </tr>`).join('') : '<tr><td colspan="4" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
+
+            document.getElementById('newslettersTableBody').innerHTML = (news && news.length) ? news.map(n => `
+                <tr>
+                    <td>${n.month||''}</td><td>${n.content||''}</td><td>${n.owner||''}</td>
+                    <td><button class="delete-btn" onclick="handleDelete('newsletters','${n.id}')">Delete</button></td>
+                </tr>`).join('') : '<tr><td colspan="4" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
+
             let totalRev = 0;
-            document.getElementById('revenueTableBody').innerHTML = rev?.map(r => { 
-                totalRev += Number(r.amount); 
-                return `<tr><td>${r.partner_name}</td><td>${r.region}</td><td>$${Number(r.amount).toLocaleString()}</td><td><button class="delete-btn" onclick="handleDelete('training_revenue', '${r.id}')">Delete</button></td></tr>`;
-            }).join('') || '';
-            document.getElementById('revTotal').innerText = `$${totalRev.toLocaleString()}`;
+            document.getElementById('revenueTableBody').innerHTML = (rev && rev.length) ? rev.map(r => {
+                totalRev += Number(r.amount) || 0;
+                return `<tr>
+                    <td>${r.partner_name||''}</td><td>${r.region||''}</td><td>$${Number(r.amount).toLocaleString()}</td>
+                    <td><button class="delete-btn" onclick="handleDelete('training_revenue','${r.id}')">Delete</button></td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="4" class="text-center text-slate-400 py-8">No entries yet</td></tr>';
 
-            // --- Dashboards (Global Insights Page Only) ---
-            const stakeholders = ['Murtaza', 'Namrata', 'Sukhada', 'Junko'];
-            const pCounts = stakeholders.map(s => plans ? plans.filter(p => p.owner === s).length : 0);
-            updateChart('plansChart', 'bar', stakeholders, pCounts, '#0050D1');
+            document.getElementById('revTotal').textContent = '$' + totalRev.toLocaleString();
 
-            const sStatuses = ['Scheduled', 'Sent'];
-            const sCounts = sStatuses.map(st => scoops ? scoops.filter(s => s.status === st).length : 0);
-            updateChart('scoopsChart', 'doughnut', sStatuses, sCounts, ['#bfdbfe', '#0050D1']);
+            const owners = ['Murtaza','Namrata','Sukhada','Junko'];
+            updateChart('plansChart','bar', owners, owners.map(o => (plans||[]).filter(p => p.owner===o).length), '#0050D1');
+            updateChart('scoopsChart','doughnut',['Scheduled','Sent'],['Scheduled','Sent'].map(st => (scoops||[]).filter(s => s.status===st).length),['#bfdbfe','#0050D1']);
+            const regions = ['ANZ','India','Japan','SEA'];
+            updateChart('revChart','line', regions, regions.map(r => (rev||[]).filter(v => v.region===r).reduce((a,c) => a+Number(c.amount),0)),'#10b981');
 
-            const regions = ['ANZ', 'India', 'Japan', 'SEA'];
-            const rData = regions.map(reg => rev ? rev.filter(v => v.region === reg).reduce((a,c) => a + Number(c.amount), 0) : 0);
-            updateChart('revChart', 'line', regions, rData, '#10b981');
-        }
+        } catch (err) { console.error('refreshData error:', err); }
+    }
 
-        function updateChart(id, type, labels, data, color) {
-            if (charts[id]) charts[id].destroy();
-            const ctx = document.getElementById(id).getContext('2d');
-            charts[id] = new Chart(ctx, {
-                type: type,
-                data: { labels: labels, datasets: [{ data: data, backgroundColor: color, borderColor: color, tension: 0.4 }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { display: type === 'doughnut', position: 'bottom' } }, scales: { y: { display: type !== 'doughnut' }, x: { display: type !== 'doughnut' } } }
-            });
-        }
+    function updateChart(id, type, labels, data, color) {
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+        if (charts[id]) charts[id].destroy();
+        charts[id] = new Chart(canvas.getContext('2d'), {
+            type,
+            data: { labels, datasets: [{ data, backgroundColor: color, borderColor: Array.isArray(color) ? '#fff' : color, tension: 0.4, fill: false }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: type==='doughnut', position: 'bottom' } }, scales: { y: { display: type!=='doughnut', beginAtZero: true }, x: { display: type!=='doughnut' } } }
+        });
+    }
 
-        window.onload = refreshData;
-    </script>
+    window.addEventListener('load', refreshData);
+</script>
 </body>
 </html>
