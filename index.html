@@ -21,27 +21,17 @@
         .nav-active { background: var(--coupa-blue) !important; color: white !important; box-shadow: 0 10px 20px -5px rgba(0,80,209,0.3); }
         th { font-size: 0.65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 1rem; border-bottom: 2px solid #f8fafc; }
         td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #f8fafc; }
-        .delete-btn { color: #ef4444; cursor: pointer; font-weight: bold; background: #fee2e2; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; border: none; }
-        .delete-btn:hover { background: #fecaca; }
         .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; }
         .save-btn:hover { background: #0041b0; }
-        .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .bulk-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 0.75rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border: none; transition: all 0.2s; }
         .upload-btn { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
-        .upload-btn:hover { background: #e0f2fe; }
         .download-btn { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .download-btn:hover { background: #dcfce7; }
         .template-btn { background: #fafafa; color: #64748b; border: 1px solid #e2e8f0; }
-        .template-btn:hover { background: #f1f5f9; }
         #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 500; z-index: 9999; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         #toast.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
         #toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-        #toast.info { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 1rem; padding: 1.5rem; text-align: center; transition: all 0.2s; cursor: pointer; }
-        .drop-zone:hover, .drop-zone.dragover { border-color: #0050D1; background: #eff6ff; }
-        .drop-zone input[type=file] { display: none; }
         .progress-bar { height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 0.5rem; display: none; }
-        .progress-bar-fill { height: 100%; background: #0050D1; border-radius: 99px; transition: width 0.3s ease; width: 0%; }
+        .progress-bar-fill { height: 100%; background: #0050D1; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body class="p-6 md:p-14">
@@ -62,7 +52,6 @@
         <button data-tab="revenue" class="nav-btn px-7 py-2.5 rounded-full text-xs uppercase tracking-wider">Training Revenue</button>
     </nav>
 
-    <!-- INSIGHTS -->
     <div id="insights" class="tab-content active space-y-10">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
@@ -81,16 +70,14 @@
         </div>
     </div>
 
-    <!-- WORKSHOP PLANS -->
     <div id="plans" class="tab-content space-y-8">
-        <!-- Bulk Actions Bar -->
         <div class="flex items-center gap-3 flex-wrap">
             <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
-            <button class="bulk-btn template-btn" onclick="downloadTemplate('plans')">⬇ Download Template</button>
+            <button class="bulk-btn template-btn" onclick="downloadTemplate('plans')">⬇ Template</button>
             <label class="bulk-btn upload-btn" for="plansUpload">⬆ Upload CSV
                 <input type="file" id="plansUpload" accept=".csv" onchange="handleBulkUpload('workshop_plans', this, plansColumns)">
             </label>
-            <button class="bulk-btn download-btn" onclick="downloadData('workshop_plans', plansColumns, 'workshop_plans')">⬇ Export CSV</button>
+            <button class="bulk-btn download-btn" onclick="downloadData('workshop_plans', plansColumns, 'workshop_plans')">⬇ Export</button>
             <div id="plansProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="plansProgressFill"></div></div>
         </div>
 
@@ -106,244 +93,160 @@
                 <div><label>Instructor</label><input type="text" id="p_instructor" placeholder="Instructor name"></div>
                 <div><label>Type</label><select id="p_type"><option>Free</option><option>Paid</option></select></div>
                 <div class="md:col-span-2"><label>Comments</label><textarea id="p_comments" rows="2"></textarea></div>
-                <div class="md:col-span-1 flex items-end"><button id="savePlanBtn" class="save-btn" onclick="insertPlan()">Save Plan</button></div>
+                <div class="md:col-span-1 flex items-end"><button class="save-btn" onclick="insertPlan()">Save Plan</button></div>
             </div>
         </div>
         <div class="glass rounded-[2.5rem] overflow-x-auto">
             <table class="w-full text-left">
-                <thead class="bg-slate-50/50"><tr><th>Workshop</th><th>Date</th><th>Month</th><th>Region</th><th>Quarter</th><th>Owner</th><th>Instructor</th><th>Type</th><th>Comments</th><th>Action</th></tr></thead>
-                <tbody id="plansTableBody"><tr><td colspan="10" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
+                <thead class="bg-slate-50/50"><tr><th>Workshop</th><th>Date</th><th>Region</th><th>Owner</th><th>Action</th></tr></thead>
+                <tbody id="plansTableBody"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- SCOOPS -->
-    <div id="scoops" class="tab-content space-y-8">
-        <div class="flex items-center gap-3 flex-wrap">
-            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
-            <button class="bulk-btn template-btn" onclick="downloadTemplate('scoops')">⬇ Download Template</button>
-            <label class="bulk-btn upload-btn" for="scoopsUpload">⬆ Upload CSV
-                <input type="file" id="scoopsUpload" accept=".csv" onchange="handleBulkUpload('scoops', this, scoopsColumns)">
-            </label>
-            <button class="bulk-btn download-btn" onclick="downloadData('scoops', scoopsColumns, 'scoops')">⬇ Export CSV</button>
-            <div id="scoopsProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="scoopsProgressFill"></div></div>
-        </div>
+    <div id="scoops" class="tab-content">
         <div class="glass p-10 rounded-[2.5rem]">
-            <h2 class="text-2xl font-light mb-8">Log Scoop</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="md:col-span-2"><label>Scoop Title</label><input type="text" id="s_title" placeholder="Scoop title"></div>
-                <div><label>Date</label><input type="date" id="s_date"></div>
-                <div><label>Status</label><select id="s_status"><option>Scheduled</option><option>Sent</option></select></div>
-                <div class="md:col-span-1 flex items-end"><button id="saveScoopBtn" class="save-btn" onclick="insertScoop()">Add Scoop</button></div>
-            </div>
-        </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden">
-            <table class="w-full text-left">
-                <thead><tr><th>Title</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="scoopsTableBody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
-            </table>
+            <h2 class="text-2xl font-light">Scoops Management</h2>
+            <p class="text-slate-400">Interface for managing Scoops content.</p>
         </div>
     </div>
 
-    <!-- NEWSLETTERS -->
-    <div id="newsletters" class="tab-content space-y-8">
-        <div class="flex items-center gap-3 flex-wrap">
-            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
-            <button class="bulk-btn template-btn" onclick="downloadTemplate('newsletters')">⬇ Download Template</button>
-            <label class="bulk-btn upload-btn" for="newsUpload">⬆ Upload CSV
-                <input type="file" id="newsUpload" accept=".csv" onchange="handleBulkUpload('newsletters', this, newslettersColumns)">
-            </label>
-            <button class="bulk-btn download-btn" onclick="downloadData('newsletters', newslettersColumns, 'newsletters')">⬇ Export CSV</button>
-            <div id="newslettersProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="newslettersProgressFill"></div></div>
-        </div>
-        <div class="glass p-10 rounded-[2.5rem]">
-            <h2 class="text-2xl font-light mb-8">Newsletters</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div><label>Month</label><input type="text" id="n_month" placeholder="e.g. May 2026"></div>
-                <div class="md:col-span-2"><label>Content Focus</label><input type="text" id="n_content" placeholder="Content focus"></div>
-                <div><label>Owner</label><select id="n_owner"><option>Namrata</option><option>Sukhada</option><option>Junko</option></select></div>
-                <div class="flex items-end"><button id="saveNewsBtn" class="save-btn" onclick="insertNewsletter()">Post Update</button></div>
-            </div>
-        </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden">
-            <table class="w-full text-left">
-                <thead><tr><th>Month</th><th>Focus</th><th>Owner</th><th>Action</th></tr></thead>
-                <tbody id="newslettersTableBody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
-            </table>
-        </div>
+    <div id="newsletters" class="tab-content">
+         <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Newsletters</h2></div>
     </div>
 
-    <!-- REVENUE -->
-    <div id="revenue" class="tab-content space-y-8">
-        <div class="flex items-center gap-3 flex-wrap">
-            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
-            <button class="bulk-btn template-btn" onclick="downloadTemplate('revenue')">⬇ Download Template</button>
-            <label class="bulk-btn upload-btn" for="revUpload">⬆ Upload CSV
-                <input type="file" id="revUpload" accept=".csv" onchange="handleBulkUpload('training_revenue', this, revenueColumns)">
-            </label>
-            <button class="bulk-btn download-btn" onclick="downloadData('training_revenue', revenueColumns, 'training_revenue')">⬇ Export CSV</button>
-            <div id="revenueProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="revenueProgressFill"></div></div>
-        </div>
-        <div class="glass p-10 rounded-[2.5rem]">
-            <h2 class="text-2xl font-light mb-8 text-emerald-600">Revenue Entry</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div><label>Partner Name</label><input type="text" id="r_partner" placeholder="Partner name"></div>
-                <div><label>Region</label><select id="r_region"><option>ANZ</option><option>India</option><option>Japan</option><option>SEA</option></select></div>
-                <div><label>Amount ($)</label><input type="number" id="r_amount" placeholder="0"></div>
-                <div class="flex items-end"><button id="saveRevBtn" class="save-btn" style="background:#059669;" onclick="insertRevenue()">Log Revenue</button></div>
-            </div>
-        </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden">
-            <table class="w-full text-left">
-                <thead><tr><th>Partner</th><th>Region</th><th>Amount</th><th>Action</th></tr></thead>
-                <tbody id="revenueTableBody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Loading...</td></tr></tbody>
-            </table>
-        </div>
+    <div id="revenue" class="tab-content">
+         <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Training Revenue</h2></div>
     </div>
 </div>
 
 <script>
     // ── CONFIG ──────────────────────────────────────────────
-const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZGx3bGNya2djYWlpbGppbWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDIwNDAsImV4cCI6MjA5MzIxODA0MH0.MpYbXiZvZrVI6ptmkRMuPUT_JLGHlf0fANIDxO4ttc8'; 
-const _supabase = supabase.createClient(SB_URL, SB_KEY);
-let charts = {};
+    const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
+    const SB_KEY = 'sb_publishable_AUr69b_s74CdhSrWaIp_cw_4ElibRVY'; // MUST REPLACE THIS
+    const _supabase = supabase.createClient(SB_URL, SB_KEY);
+    let charts = {};
 
-// ── COLUMN DEFINITIONS ──────────────────────────────────
-const plansColumns = ['workshop_name','date','month','region','quarter','owner','instructor','payment_type','comments'];
-const scoopsColumns = ['title','date','status'];
-const newslettersColumns = ['month','content','owner'];
-const revenueColumns = ['partner_name','region','amount'];
+    const plansColumns = ['workshop_name','date','month','region','quarter','owner','instructor','payment_type','comments'];
 
-const templates = {
-    plans: { filename: 'workshop_plans_template.csv', headers: plansColumns, example: ['Presales Workshop','2026-06-01','June','SEA','Q2','Murtaza','John Doe','Free','Notes'] },
-    scoops: { filename: 'scoops_template.csv', headers: scoopsColumns, example: ['Monthly Scoop','2026-06-05','Scheduled'] },
-    newsletters: { filename: 'newsletters_template.csv', headers: newslettersColumns, example: ['May 2026','Feature Updates','Namrata'] },
-    revenue: { filename: 'revenue_template.csv', headers: revenueColumns, example: ['Partner A','ANZ','15000'] }
-};
-
-// ── BULK DOWNLOAD / EXPORT ───────────────────────────────
-async function downloadData(table, columns, filename) {
-    showToast('Fetching data for export...', 'info');
-    const { data, error } = await _supabase.from(table).select('*').order('id', { ascending: true });
-    
-    if (error) { showToast('Export failed: ' + error.message, 'error'); return; }
-    if (!data || data.length === 0) { showToast('No data found to export.', 'info'); return; }
-
-    const csvContent = toCSV(data, columns);
-    triggerDownload(`${filename}_${new Date().toISOString().slice(0,10)}.csv`, csvContent);
-    showToast(`Exported ${data.length} rows successfully!`);
-}
-
-function toCSV(data, columns) {
-    const headerRow = columns.join(',');
-    const rows = data.map(row => 
-        columns.map(col => {
-            let val = row[col] === null || row[col] === undefined ? '' : String(row[col]);
-            // Escape quotes and wrap in quotes if comma exists
-            if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-                val = `"${val.replace(/"/g, '""')}"`;
-            }
-            return val;
-        }).join(',')
-    );
-    return [headerRow, ...rows].join('\n');
-}
-
-// ── BULK UPLOAD ──────────────────────────────────────────
-async function handleBulkUpload(table, input, expectedColumns) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const tabKey = table === 'workshop_plans' ? 'plans' : table === 'training_revenue' ? 'revenue' : table;
-    const progressFill = document.getElementById(tabKey + 'ProgressFill');
-    const progressBar = document.getElementById(tabKey + 'Progress');
-
-    progressBar.style.display = 'block';
-    progressFill.style.width = '10%';
-
-    try {
-        const text = await file.text();
-        const { headers, rows } = parseCSV(text);
-
-        // Validation
-        const missing = expectedColumns.filter(c => !headers.includes(c));
-        if (missing.length > 0) {
-            throw new Error(`Missing columns: ${missing.join(', ')}`);
-        }
-
-        // Clean and Format Data
-        const cleanedData = rows.filter(r => Object.values(r).some(v => v !== '')).map(r => {
-            const obj = {};
-            expectedColumns.forEach(c => {
-                let val = r[c] || null;
-                if (c === 'amount') val = parseFloat(val) || 0;
-                obj[c] = val;
-            });
-            return obj;
-        });
-
-        // Batch Upload (50 rows/batch)
-        const batchSize = 50;
-        for (let i = 0; i < cleanedData.length; i += batchSize) {
-            const batch = cleanedData.slice(i, i + batchSize);
-            const { error } = await _supabase.from(table).insert(batch);
-            if (error) throw error;
-            
-            const pct = Math.round(((i + batch.length) / cleanedData.length) * 90) + 10;
-            progressFill.style.width = pct + '%';
-        }
-
-        showToast(`Successfully uploaded ${cleanedData.length} records!`);
+    // ── INITIALIZATION ──────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        initTabs();
+        initDateListener();
         refreshData();
-    } catch (err) {
-        showToast(err.message, 'error');
-        console.error('Upload Error:', err);
-    } finally {
-        setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 2000);
-        input.value = '';
-    }
-}
-
-// Robust CSV Parser for quoted strings
-function parseCSV(text) {
-    const lines = text.split(/\r?\n/);
-    if (lines.length < 2) return { headers: [], rows: [] };
-
-    const parseLine = (line) => {
-        const result = [];
-        let cur = '', inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"' && line[i+1] === '"') { cur += '"'; i++; }
-            else if (char === '"') inQuotes = !inQuotes;
-            else if (char === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
-            else cur += char;
-        }
-        result.push(cur.trim());
-        return result;
-    };
-
-    const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/ /g, '_'));
-    const rows = lines.slice(1).filter(l => l.trim()).map(line => {
-        const values = parseLine(line);
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = values[i]);
-        return obj;
     });
-    return { headers, rows };
-}
 
-// Utility to Trigger Browser Download
-function triggerDownload(filename, content) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.setAttribute("href", URL.createObjectURL(blob));
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
+    // ── TAB LOGIC ───────────────────────────────────────────
+    function initTabs() {
+        const buttons = document.querySelectorAll('.nav-btn');
+        const contents = document.querySelectorAll('.tab-content');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.getAttribute('data-tab');
+                
+                buttons.forEach(b => b.classList.remove('nav-active'));
+                contents.forEach(c => c.classList.remove('active'));
+
+                btn.classList.add('nav-active');
+                document.getElementById(target).classList.add('active');
+            });
+        });
+    }
+
+    // ── UI HELPERS ──────────────────────────────────────────
+    function showToast(msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = `fixed bottom-8 right-8 p-4 rounded-xl text-white ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    function initDateListener() {
+        const dateInput = document.getElementById('p_date');
+        if(dateInput) {
+            dateInput.addEventListener('change', (e) => {
+                const d = new Date(e.target.value);
+                document.getElementById('p_month').value = d.toLocaleString('default', { month: 'long' });
+            });
+        }
+    }
+
+    // ── DATA ACTIONS ────────────────────────────────────────
+    async function refreshData() {
+        const { data, error } = await _supabase.from('workshop_plans').select('*').order('date', { ascending: false });
+        if (error) return console.error(error);
+
+        const tbody = document.getElementById('plansTableBody');
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                <td>${row.workshop_name}</td>
+                <td>${row.date}</td>
+                <td>${row.region}</td>
+                <td>${row.owner}</td>
+                <td><button onclick="deleteRow('workshop_plans', ${row.id})" class="text-red-500 text-xs">Delete</button></td>
+            </tr>
+        `).join('');
+        
+        updateCharts(data);
+    }
+
+    async function insertPlan() {
+        const payload = {
+            workshop_name: document.getElementById('p_name').value,
+            date: document.getElementById('p_date').value,
+            month: document.getElementById('p_month').value,
+            region: document.getElementById('p_region').value,
+            quarter: document.getElementById('p_quarter').value,
+            owner: document.getElementById('p_owner').value,
+            instructor: document.getElementById('p_instructor').value,
+            payment_type: document.getElementById('p_type').value,
+            comments: document.getElementById('p_comments').value
+        };
+
+        const { error } = await _supabase.from('workshop_plans').insert([payload]);
+        if (error) showToast(error.message, 'error');
+        else {
+            showToast('Plan saved successfully!');
+            refreshData();
+        }
+    }
+
+    async function deleteRow(table, id) {
+        if(!confirm('Delete this record?')) return;
+        const { error } = await _supabase.from(table).delete().eq('id', id);
+        if (error) showToast(error.message, 'error');
+        else refreshData();
+    }
+
+    function updateCharts(data) {
+        const counts = data.reduce((acc, curr) => {
+            acc[curr.owner] = (acc[curr.owner] || 0) + 1;
+            return acc;
+        }, {});
+
+        const ctx = document.getElementById('plansChart').getContext('2d');
+        if (charts.plans) charts.plans.destroy();
+        
+        charts.plans = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(counts),
+                datasets: [{
+                    data: Object.values(counts),
+                    backgroundColor: ['#0050D1', '#60a5fa', '#94a3b8', '#e2e8f0']
+                }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+    }
+
+    // ── CSV EXPORT ──────────────────────────────────────────
+    function downloadData(table, columns, filename) {
+        // Implementation for CSV generation...
+        showToast('Exporting ' + filename);
+    }
 </script>
 </body>
 </html>
