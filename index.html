@@ -16,13 +16,16 @@
         .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         label { font-size: 0.7rem; font-weight: 500; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.25rem; display: block; }
-        input, select { font-size: 0.85rem !important; padding: 0.8rem 1rem !important; border-radius: 0.85rem !important; border: 1px solid #e2e8f0 !important; width: 100%; }
+        input, select, textarea { font-size: 0.85rem !important; padding: 0.8rem 1rem !important; border-radius: 0.85rem !important; border: 1px solid #e2e8f0 !important; background: #ffffff !important; width: 100%; box-sizing: border-box; }
         .nav-btn { transition: all 0.3s ease; color: #64748b; font-weight: 400; cursor: pointer; border: none; background: transparent; }
         .nav-active { background: var(--coupa-blue) !important; color: white !important; box-shadow: 0 10px 20px -5px rgba(0,80,209,0.3); }
-        th { font-size: 0.65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 1rem; border-bottom: 2px solid #f8fafc; cursor: pointer; }
+        th { font-size: 0.65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 1rem; border-bottom: 2px solid #f8fafc; }
         td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #f8fafc; }
-        .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; cursor: pointer; width: 100%; }
-        #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; z-index: 9999; display: none; color: white; }
+        .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; }
+        .save-btn:hover { background: #0041b0; }
+        #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 500; z-index: 9999; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #toast.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        #toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
     </style>
 </head>
 <body class="p-6 md:p-14">
@@ -32,6 +35,7 @@
 <div class="max-w-[1500px] mx-auto">
     <header class="mb-14">
         <h1 class="text-5xl font-semibold text-[#0050D1] tracking-tight">Coupa <span class="font-light text-slate-400">x Partner Page</span></h1>
+        <p class="text-slate-400 text-lg font-light mt-2 italic">Partner on a page</p>
     </header>
 
     <nav class="glass rounded-full p-1.5 flex gap-1 mb-14 w-fit border border-slate-100">
@@ -43,168 +47,191 @@
     </nav>
 
     <div id="insights" class="tab-content active space-y-10">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="glass p-8 rounded-[2.5rem]">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Workshop Ownership</h3>
                 <div class="h-64"><canvas id="plansChart"></canvas></div>
             </div>
-            <div class="glass p-8 rounded-[2.5rem] flex flex-col justify-center items-center">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Total Revenue</h3>
+            <div class="glass p-8 rounded-[2.5rem] min-h-[350px]">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Communication Status</h3>
+                <div class="h-64"><canvas id="scoopsChart"></canvas></div>
+            </div>
+            <div class="glass p-8 rounded-[2.5rem] flex flex-col justify-center items-center text-center">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Total Partner Revenue</h3>
                 <h2 id="revTotal" class="text-7xl font-light text-[#0050D1] tracking-tighter">$0</h2>
+                <div class="w-full mt-8 h-32"><canvas id="revChart"></canvas></div>
             </div>
         </div>
     </div>
 
     <div id="plans" class="tab-content space-y-8">
-        <div class="glass p-6 rounded-3xl flex gap-4 items-center">
-            <label class="m-0">Sort By:</label>
-            <select id="sort_col" onchange="applyFiltersAndSort()" class="!w-40"><option value="date">Date</option><option value="workshop_name">Name</option><option value="region">Region</option></select>
-            <label class="ml-4 m-0">Filter Region:</label>
-            <select id="filter_region" onchange="applyFiltersAndSort()" class="!w-40"><option value="">All</option><option>SEA</option><option>ANZ</option><option>Japan</option></select>
-        </div>
-
         <div class="glass p-10 rounded-[2.5rem]">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div><label>Name</label><input type="text" id="p_name"></div>
+            <h2 class="text-2xl font-light mb-8">Register Workshop Plan</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="md:col-span-2"><label>Presales Workshop</label><input type="text" id="p_name" placeholder="Workshop name"></div>
                 <div><label>Date</label><input type="date" id="p_date"></div>
+                <div><label>Month</label><input type="text" id="p_month" readonly style="background:#f8fafc !important;"></div>
                 <div><label>Region</label><select id="p_region"><option>SEA</option><option>ANZ</option><option>Japan</option></select></div>
-                <div><label>Quarter</label><select id="p_quarter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
-                <div class="flex items-end"><button class="save-btn" onclick="insertPlan()">Save</button></div>
+                <div><label>Owner</label><select id="p_owner"><option>Murtaza</option><option>Namrata</option><option>Sukhada</option></select></div>
+                <div class="md:col-span-1 flex items-end"><button class="save-btn" onclick="insertPlan()">Save Plan</button></div>
             </div>
         </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Workshop</th><th>Date</th><th>Region</th><th>Quarter</th><th>Action</th></tr></thead><tbody id="plansTableBody"></tbody></table></div>
+        <div class="glass rounded-[2.5rem] overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50/50"><tr><th>Workshop</th><th>Date</th><th>Region</th><th>Owner</th><th>Action</th></tr></thead>
+                <tbody id="plansTableBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <div id="scoops" class="tab-content space-y-8">
-        <div class="glass p-10 rounded-[2.5rem] flex gap-4">
-            <input type="text" id="s_title" placeholder="Scoop Title">
-            <button class="save-btn !w-40" onclick="insertScoop()">Add Scoop</button>
+        <div class="glass p-10 rounded-[2.5rem]">
+            <h2 class="text-2xl font-light mb-8">Log Scoop</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label>Scoop Title</label><input type="text" id="s_title"></div>
+                <div><label>Status</label><select id="s_status"><option>Scheduled</option><option>Sent</option></select></div>
+                <div class="flex items-end"><button class="save-btn" onclick="insertScoop()">Add Scoop</button></div>
+            </div>
         </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Title</th><th>Action</th></tr></thead><tbody id="scoopsTableBody"></tbody></table></div>
+        <div class="glass rounded-[2.5rem] overflow-hidden">
+            <table class="w-full text-left">
+                <thead><tr><th>Title</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="scoopsTableBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <div id="newsletters" class="tab-content space-y-8">
-        <div class="glass p-10 rounded-[2.5rem] flex gap-4">
-            <input type="text" id="n_month" placeholder="Month (e.g. May)">
-            <button class="save-btn !w-40" onclick="insertNewsletter()">Add Newsletter</button>
-        </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Month</th><th>Action</th></tr></thead><tbody id="newslettersTableBody"></tbody></table></div>
+        <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Newsletters Management</h2></div>
     </div>
 
     <div id="revenue" class="tab-content space-y-8">
-        <div class="glass p-10 rounded-[2.5rem] flex gap-4">
-            <input type="number" id="r_amount" placeholder="Amount">
-            <button class="save-btn !w-40" onclick="insertRevenue()">Log Revenue</button>
-        </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden"><table class="w-full text-left"><thead><tr><th>Amount</th><th>Action</th></tr></thead><tbody id="revenueTableBody"></tbody></table></div>
+        <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Revenue Tracking</h2></div>
     </div>
 </div>
 
 <script>
+    // --- CONFIG ---
     const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZGx3bGNya2djYWlpbGppbWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDIwNDAsImV4cCI6MjA5MzIxODA0MH0.MpYbXiZvZrVI6ptmkRMuPUT_JLGHlf0fANIDxO4ttc8';
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
-    
-    let cache = { plans: [], scoops: [], newsletters: [], revenue: [] };
+    let charts = {};
 
+    // --- INITIALIZE ---
     document.addEventListener('DOMContentLoaded', () => {
         setupTabs();
-        fetchAllData();
+        setupDateListeners();
+        fetchAllData(); // Initial load
     });
 
-    function showToast(msg, isError = false) {
-        const t = document.getElementById('toast');
-        t.style.display = 'block';
-        t.style.background = isError ? '#ef4444' : '#10b981';
-        t.textContent = msg;
-        setTimeout(() => t.style.display = 'none', 3000);
-    }
-
+    // --- TAB SWITCHING LOGIC ---
     function setupTabs() {
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('nav-active');
-                document.getElementById(btn.dataset.tab).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.getAttribute('data-tab');
+                
+                // Toggle Buttons
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('nav-active'));
+                button.classList.add('nav-active');
+
+                // Toggle Content
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(target).classList.add('active');
+
+                // Refresh data for specific tab if needed
+                fetchAllData();
             });
         });
     }
 
-    async function fetchAllData() {
-        try {
-            const [p, s, n, r] = await Promise.all([
-                _supabase.from('workshop_plans').select('*'),
-                _supabase.from('scoops').select('*'),
-                _supabase.from('newsletters').select('*'),
-                _supabase.from('training_revenue').select('*')
-            ]);
+    // --- UTILITIES ---
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = `fixed bottom-8 right-8 p-4 rounded-xl text-white shadow-xl ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
 
-            if (p.error) throw p.error;
-
-            cache.plans = p.data || [];
-            cache.scoops = s.data || [];
-            cache.newsletters = n.data || [];
-            cache.revenue = r.data || [];
-
-            applyFiltersAndSort();
-            renderScoops();
-            renderNewsletters();
-            renderRevenue();
-            updateInsights();
-        } catch (err) {
-            console.error("Fetch Error:", err);
-            showToast("Database error: Check Console (F12)", true);
+    function setupDateListeners() {
+        const dateIn = document.getElementById('p_date');
+        if(dateIn) {
+            dateIn.addEventListener('change', (e) => {
+                const d = new Date(e.target.value);
+                document.getElementById('p_month').value = d.toLocaleString('default', { month: 'long' });
+            });
         }
     }
 
-    function applyFiltersAndSort() {
-        const col = document.getElementById('sort_col').value;
-        const reg = document.getElementById('filter_region').value;
+    // --- DATA FETCHING ---
+    async function fetchAllData() {
+        // Fetch Plans
+        const { data: plans } = await _supabase.from('workshop_plans').select('*').order('id', {ascending: false});
+        renderTable('plansTableBody', plans, ['workshop_name', 'date', 'region', 'owner'], 'workshop_plans');
 
-        let filtered = cache.plans.filter(p => reg === "" || p.region === reg);
-        filtered.sort((a, b) => a[col] > b[col] ? 1 : -1);
+        // Fetch Scoops
+        const { data: scoops } = await _supabase.from('scoops').select('*').order('id', {ascending: false});
+        renderTable('scoopsTableBody', scoops, ['title', 'status'], 'scoops');
 
-        document.getElementById('plansTableBody').innerHTML = filtered.map(row => `
-            <tr><td>${row.workshop_name}</td><td>${row.date}</td><td>${row.region}</td><td>${row.quarter}</td>
-            <td><button onclick="deleteItem('workshop_plans', ${row.id})" class="text-red-500">Delete</button></td></tr>
+        updateInsights(plans);
+    }
+
+    function renderTable(elementId, data, cols, tableName) {
+        const tbody = document.getElementById(elementId);
+        if(!tbody || !data) return;
+
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                ${cols.map(c => `<td>${row[c] || ''}</td>`).join('')}
+                <td><button onclick="deleteItem('${tableName}', ${row.id})" class="text-red-500 hover:underline">Delete</button></td>
+            </tr>
         `).join('');
     }
 
-    // Individual Renderers
-    function renderScoops() {
-        document.getElementById('scoopsTableBody').innerHTML = cache.scoops.map(s => `<tr><td>${s.title}</td><td><button onclick="deleteItem('scoops', ${s.id})" class="text-red-500">Delete</button></td></tr>`).join('');
-    }
-    function renderNewsletters() {
-        document.getElementById('newslettersTableBody').innerHTML = cache.newsletters.map(n => `<tr><td>${n.month}</td><td><button onclick="deleteItem('newsletters', ${n.id})" class="text-red-500">Delete</button></td></tr>`).join('');
-    }
-    function renderRevenue() {
-        document.getElementById('revenueTableBody').innerHTML = cache.revenue.map(r => `<tr><td>$${r.amount}</td><td><button onclick="deleteItem('training_revenue', ${r.id})" class="text-red-500">Delete</button></td></tr>`).join('');
-    }
-
-    // Insert Actions
+    // --- INSERT ACTIONS ---
     async function insertPlan() {
-        const { error } = await _supabase.from('workshop_plans').insert([{
+        const payload = {
             workshop_name: document.getElementById('p_name').value,
             date: document.getElementById('p_date').value,
+            month: document.getElementById('p_month').value,
             region: document.getElementById('p_region').value,
-            quarter: document.getElementById('p_quarter').value
-        }]);
-        if(error) console.error(error); fetchAllData();
-    }
+            owner: document.getElementById('p_owner').value
+        };
 
-    async function insertScoop() { await _supabase.from('scoops').insert([{title: document.getElementById('s_title').value}]); fetchAllData(); }
-    async function insertNewsletter() { await _supabase.from('newsletters').insert([{month: document.getElementById('n_month').value}]); fetchAllData(); }
-    async function insertRevenue() { await _supabase.from('training_revenue').insert([{amount: document.getElementById('r_amount').value}]); fetchAllData(); }
+        const { error } = await _supabase.from('workshop_plans').insert([payload]);
+        if(error) showToast(error.message, 'error');
+        else { showToast('Plan added!'); fetchAllData(); }
+    }
 
     async function deleteItem(table, id) {
-        await _supabase.from(table).delete().eq('id', id);
-        fetchAllData();
+        if(!confirm('Delete this entry?')) return;
+        const { error } = await _supabase.from(table).delete().eq('id', id);
+        if(error) showToast(error.message, 'error');
+        else fetchAllData();
     }
 
-    function updateInsights() {
-        const total = cache.revenue.reduce((sum, r) => sum + Number(r.amount), 0);
-        document.getElementById('revTotal').textContent = `$${total.toLocaleString()}`;
+    // --- CHARTS ---
+    function updateInsights(plans) {
+        if(!plans || plans.length === 0) return;
+        const ctx = document.getElementById('plansChart').getContext('2d');
+        
+        const counts = plans.reduce((acc, p) => {
+            acc[p.owner] = (acc[p.owner] || 0) + 1;
+            return acc;
+        }, {});
+
+        if(charts.plans) charts.plans.destroy();
+        charts.plans = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(counts),
+                datasets: [{
+                    data: Object.values(counts),
+                    backgroundColor: ['#0050D1', '#60a5fa', '#94a3b8']
+                }]
+            },
+            options: { maintainAspectRatio: false }
+        });
     }
 </script>
 </body>
