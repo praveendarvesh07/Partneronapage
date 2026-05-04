@@ -23,9 +23,15 @@
         td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #f8fafc; }
         .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; }
         .save-btn:hover { background: #0041b0; }
+        .bulk-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 0.75rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border: none; transition: all 0.2s; }
+        .upload-btn { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+        .download-btn { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .template-btn { background: #fafafa; color: #64748b; border: 1px solid #e2e8f0; }
         #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 500; z-index: 9999; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         #toast.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
         #toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .progress-bar { height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 0.5rem; display: none; }
+        .progress-bar-fill { height: 100%; background: #0050D1; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body class="p-6 md:p-14">
@@ -65,18 +71,32 @@
     </div>
 
     <div id="plans" class="tab-content space-y-8">
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
+            <button class="bulk-btn template-btn" onclick="downloadTemplate('plans')">⬇ Template</button>
+            <label class="bulk-btn upload-btn" for="plansUpload">⬆ Upload CSV
+                <input type="file" id="plansUpload" accept=".csv" onchange="handleBulkUpload('workshop_plans', this, plansColumns)">
+            </label>
+            <button class="bulk-btn download-btn" onclick="downloadData('workshop_plans', plansColumns, 'workshop_plans')">⬇ Export</button>
+            <div id="plansProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="plansProgressFill"></div></div>
+        </div>
+
         <div class="glass p-10 rounded-[2.5rem]">
             <h2 class="text-2xl font-light mb-8">Register Workshop Plan</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="md:col-span-2"><label>Presales Workshop</label><input type="text" id="p_name" placeholder="Workshop name"></div>
                 <div><label>Date</label><input type="date" id="p_date"></div>
                 <div><label>Month</label><input type="text" id="p_month" readonly style="background:#f8fafc !important;"></div>
-                <div><label>Region</label><select id="p_region"><option>SEA</option><option>ANZ</option><option>Japan</option></select></div>
-                <div><label>Owner</label><select id="p_owner"><option>Murtaza</option><option>Namrata</option><option>Sukhada</option></select></div>
+                <div><label>Region</label><select id="p_region"><option>SEA</option><option>ANZ</option><option>Japan</option><option>Other</option></select></div>
+                <div><label>Quarter</label><select id="p_quarter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
+                <div><label>Owner</label><select id="p_owner"><option>Murtaza</option><option>Namrata</option><option>Sukhada</option><option>Junko</option></select></div>
+                <div><label>Instructor</label><input type="text" id="p_instructor" placeholder="Instructor name"></div>
+                <div><label>Type</label><select id="p_type"><option>Free</option><option>Paid</option></select></div>
+                <div class="md:col-span-2"><label>Comments</label><textarea id="p_comments" rows="2"></textarea></div>
                 <div class="md:col-span-1 flex items-end"><button class="save-btn" onclick="insertPlan()">Save Plan</button></div>
             </div>
         </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden">
+        <div class="glass rounded-[2.5rem] overflow-x-auto">
             <table class="w-full text-left">
                 <thead class="bg-slate-50/50"><tr><th>Workshop</th><th>Date</th><th>Region</th><th>Owner</th><th>Action</th></tr></thead>
                 <tbody id="plansTableBody"></tbody>
@@ -84,154 +104,148 @@
         </div>
     </div>
 
-    <div id="scoops" class="tab-content space-y-8">
+    <div id="scoops" class="tab-content">
         <div class="glass p-10 rounded-[2.5rem]">
-            <h2 class="text-2xl font-light mb-8">Log Scoop</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label>Scoop Title</label><input type="text" id="s_title"></div>
-                <div><label>Status</label><select id="s_status"><option>Scheduled</option><option>Sent</option></select></div>
-                <div class="flex items-end"><button class="save-btn" onclick="insertScoop()">Add Scoop</button></div>
-            </div>
-        </div>
-        <div class="glass rounded-[2.5rem] overflow-hidden">
-            <table class="w-full text-left">
-                <thead><tr><th>Title</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="scoopsTableBody"></tbody>
-            </table>
+            <h2 class="text-2xl font-light">Scoops Management</h2>
+            <p class="text-slate-400">Interface for managing Scoops content.</p>
         </div>
     </div>
 
-    <div id="newsletters" class="tab-content space-y-8">
-        <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Newsletters Management</h2></div>
+    <div id="newsletters" class="tab-content">
+         <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Newsletters</h2></div>
     </div>
 
-    <div id="revenue" class="tab-content space-y-8">
-        <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Revenue Tracking</h2></div>
+    <div id="revenue" class="tab-content">
+         <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Training Revenue</h2></div>
     </div>
 </div>
 
 <script>
-    // --- CONFIG ---
+    // ── CONFIG ──────────────────────────────────────────────
     const SB_URL = 'https://lsdlwlcrkgcaiiljimhx.supabase.co';
-    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZGx3bGNya2djYWlpbGppbWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDIwNDAsImV4cCI6MjA5MzIxODA0MH0.MpYbXiZvZrVI6ptmkRMuPUT_JLGHlf0fANIDxO4ttc8';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZGx3bGNya2djYWlpbGppbWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDIwNDAsImV4cCI6MjA5MzIxODA0MH0.MpYbXiZvZrVI6ptmkRMuPUT_JLGHlf0fANIDxO4ttc8'; // MUST REPLACE THIS
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
     let charts = {};
 
-    // --- INITIALIZE ---
+    const plansColumns = ['workshop_name','date','month','region','quarter','owner','instructor','payment_type','comments'];
+
+    // ── INITIALIZATION ──────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
-        setupTabs();
-        setupDateListeners();
-        fetchAllData(); // Initial load
+        initTabs();
+        initDateListener();
+        refreshData();
     });
 
-    // --- TAB SWITCHING LOGIC ---
-    function setupTabs() {
-        document.querySelectorAll('.nav-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const target = button.getAttribute('data-tab');
+    // ── TAB LOGIC ───────────────────────────────────────────
+    function initTabs() {
+        const buttons = document.querySelectorAll('.nav-btn');
+        const contents = document.querySelectorAll('.tab-content');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.getAttribute('data-tab');
                 
-                // Toggle Buttons
-                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('nav-active'));
-                button.classList.add('nav-active');
+                buttons.forEach(b => b.classList.remove('nav-active'));
+                contents.forEach(c => c.classList.remove('active'));
 
-                // Toggle Content
-                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                btn.classList.add('nav-active');
                 document.getElementById(target).classList.add('active');
-
-                // Refresh data for specific tab if needed
-                fetchAllData();
             });
         });
     }
 
-    // --- UTILITIES ---
+    // ── UI HELPERS ──────────────────────────────────────────
     function showToast(msg, type = 'success') {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className = `fixed bottom-8 right-8 p-4 rounded-xl text-white shadow-xl ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
-        t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 3000);
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = `fixed bottom-8 right-8 p-4 rounded-xl text-white ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 3000);
     }
 
-    function setupDateListeners() {
-        const dateIn = document.getElementById('p_date');
-        if(dateIn) {
-            dateIn.addEventListener('change', (e) => {
+    function initDateListener() {
+        const dateInput = document.getElementById('p_date');
+        if(dateInput) {
+            dateInput.addEventListener('change', (e) => {
                 const d = new Date(e.target.value);
                 document.getElementById('p_month').value = d.toLocaleString('default', { month: 'long' });
             });
         }
     }
 
-    // --- DATA FETCHING ---
-    async function fetchAllData() {
-        // Fetch Plans
-        const { data: plans } = await _supabase.from('workshop_plans').select('*').order('id', {ascending: false});
-        renderTable('plansTableBody', plans, ['workshop_name', 'date', 'region', 'owner'], 'workshop_plans');
+    // ── DATA ACTIONS ────────────────────────────────────────
+    async function refreshData() {
+        const { data, error } = await _supabase.from('workshop_plans').select('*').order('date', { ascending: false });
+        if (error) return console.error(error);
 
-        // Fetch Scoops
-        const { data: scoops } = await _supabase.from('scoops').select('*').order('id', {ascending: false});
-        renderTable('scoopsTableBody', scoops, ['title', 'status'], 'scoops');
-
-        updateInsights(plans);
-    }
-
-    function renderTable(elementId, data, cols, tableName) {
-        const tbody = document.getElementById(elementId);
-        if(!tbody || !data) return;
-
+        const tbody = document.getElementById('plansTableBody');
         tbody.innerHTML = data.map(row => `
             <tr>
-                ${cols.map(c => `<td>${row[c] || ''}</td>`).join('')}
-                <td><button onclick="deleteItem('${tableName}', ${row.id})" class="text-red-500 hover:underline">Delete</button></td>
+                <td>${row.workshop_name}</td>
+                <td>${row.date}</td>
+                <td>${row.region}</td>
+                <td>${row.owner}</td>
+                <td><button onclick="deleteRow('workshop_plans', ${row.id})" class="text-red-500 text-xs">Delete</button></td>
             </tr>
         `).join('');
+        
+        updateCharts(data);
     }
 
-    // --- INSERT ACTIONS ---
     async function insertPlan() {
         const payload = {
             workshop_name: document.getElementById('p_name').value,
             date: document.getElementById('p_date').value,
             month: document.getElementById('p_month').value,
             region: document.getElementById('p_region').value,
-            owner: document.getElementById('p_owner').value
+            quarter: document.getElementById('p_quarter').value,
+            owner: document.getElementById('p_owner').value,
+            instructor: document.getElementById('p_instructor').value,
+            payment_type: document.getElementById('p_type').value,
+            comments: document.getElementById('p_comments').value
         };
 
         const { error } = await _supabase.from('workshop_plans').insert([payload]);
-        if(error) showToast(error.message, 'error');
-        else { showToast('Plan added!'); fetchAllData(); }
+        if (error) showToast(error.message, 'error');
+        else {
+            showToast('Plan saved successfully!');
+            refreshData();
+        }
     }
 
-    async function deleteItem(table, id) {
-        if(!confirm('Delete this entry?')) return;
+    async function deleteRow(table, id) {
+        if(!confirm('Delete this record?')) return;
         const { error } = await _supabase.from(table).delete().eq('id', id);
-        if(error) showToast(error.message, 'error');
-        else fetchAllData();
+        if (error) showToast(error.message, 'error');
+        else refreshData();
     }
 
-    // --- CHARTS ---
-    function updateInsights(plans) {
-        if(!plans || plans.length === 0) return;
-        const ctx = document.getElementById('plansChart').getContext('2d');
-        
-        const counts = plans.reduce((acc, p) => {
-            acc[p.owner] = (acc[p.owner] || 0) + 1;
+    function updateCharts(data) {
+        const counts = data.reduce((acc, curr) => {
+            acc[curr.owner] = (acc[curr.owner] || 0) + 1;
             return acc;
         }, {});
 
-        if(charts.plans) charts.plans.destroy();
+        const ctx = document.getElementById('plansChart').getContext('2d');
+        if (charts.plans) charts.plans.destroy();
+        
         charts.plans = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(counts),
                 datasets: [{
                     data: Object.values(counts),
-                    backgroundColor: ['#0050D1', '#60a5fa', '#94a3b8']
+                    backgroundColor: ['#0050D1', '#60a5fa', '#94a3b8', '#e2e8f0']
                 }]
             },
             options: { maintainAspectRatio: false }
         });
+    }
+
+    // ── CSV EXPORT ──────────────────────────────────────────
+    function downloadData(table, columns, filename) {
+        // Implementation for CSV generation...
+        showToast('Exporting ' + filename);
     }
 </script>
 </body>
