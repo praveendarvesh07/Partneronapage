@@ -21,7 +21,8 @@
         .nav-active { background: var(--coupa-blue) !important; color: white !important; box-shadow: 0 10px 20px -5px rgba(0,80,209,0.3); }
         th { font-size: 0.65rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 1rem; border-bottom: 2px solid #f8fafc; }
         td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #f8fafc; }
-        .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; }
+        .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; transition: all 0.2s; }
+        .save-btn.edit-mode { background: #f59e0b; } /* Amber color for edit mode */
         .bulk-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 0.75rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border: none; transition: all 0.2s; }
         .upload-btn { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
         #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 500; z-index: 9999; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
@@ -50,9 +51,13 @@
             <div id="uploadStatus" class="text-xs text-slate-400"></div>
         </div>
 
-        <div class="glass p-10 rounded-[2.5rem]">
-            <h2 class="text-2xl font-light mb-8">Register Workshop Plan</h2>
+        <div id="registrationForm" class="glass p-10 rounded-[2.5rem] transition-all duration-500">
+            <div class="flex justify-between items-center mb-8">
+                <h2 id="formTitle" class="text-2xl font-light">Register Workshop Plan</h2>
+                <button id="cancelEdit" class="hidden text-xs text-red-500 uppercase tracking-widest font-bold" onclick="resetForm()">Cancel Edit</button>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="hidden" id="edit_id">
                 <div class="md:col-span-2"><label>Presales Workshop</label><input type="text" id="p_name"></div>
                 <div><label>Date (Optional if TBD)</label><input type="date" id="p_date"></div>
                 <div><label>Region</label><select id="p_region"><option>SEA</option><option>ANZ</option><option>Japan</option></select></div>
@@ -60,7 +65,9 @@
                 <div><label>Instructor</label><input type="text" id="p_instructor"></div>
                 <div><label>Type</label><select id="p_type"><option>Free</option><option>Paid</option></select></div>
                 <div class="md:col-span-2"><label>Comments</label><textarea id="p_comments" rows="1"></textarea></div>
-                <div class="flex items-end"><button class="save-btn" onclick="insertPlan()">Save Plan</button></div>
+                <div class="flex items-end">
+                    <button id="mainActionBtn" class="save-btn w-full" onclick="handleSave()">Save Plan</button>
+                </div>
             </div>
         </div>
 
@@ -82,7 +89,6 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZGx3bGNya2djYWlpbGppbWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDIwNDAsImV4cCI6MjA5MzIxODA0MH0.MpYbXiZvZrVI6ptmkRMuPUT_JLGHlf0fANIDxO4ttc8';
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    // Columns MUST match Supabase column names exactly
     const plansColumns = ['workshop_name','date','month','region','quarter', 'owner', 'instructor', 'payment_type', 'comments'];
 
     document.addEventListener('DOMContentLoaded', () => refreshData());
@@ -93,75 +99,6 @@
         toast.className = `fixed bottom-8 right-8 p-4 rounded-xl text-white ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
         toast.style.display = 'block';
         setTimeout(() => toast.style.display = 'none', 4000);
-    }
-
-    // ── BULK UPLOAD LOGIC ──
-    async function handleBulkUpload(tableName, input, columns) {
-        const file = input.files[0];
-        if (!file) return;
-
-        document.getElementById('uploadStatus').textContent = "Processing file...";
-        
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const text = e.target.result;
-                const rows = parseCSV(text);
-
-                if (rows.length === 0) throw new Error("CSV file is empty or missing data rows.");
-
-                // Map CSV rows to Supabase Objects
-                const payload = rows.map((row, index) => {
-                    if (row.length < 2) throw new Error(`Row ${index + 2} has invalid data.`);
-                    
-                    let obj = {};
-                    columns.forEach((col, i) => {
-                        obj[col] = row[i] || null;
-                    });
-                    return obj;
-                });
-
-                const { data, error } = await _supabase.from(tableName).insert(payload);
-
-                if (error) throw error;
-
-                showToast(`Success! Extracted and saved ${payload.length} rows.`);
-                refreshData();
-            } catch (err) {
-                console.error(err);
-                showToast("Invalid Data: " + err.message, "error");
-            } finally {
-                document.getElementById('uploadStatus').textContent = "";
-                input.value = ""; // Clear file input
-            }
-        };
-        reader.readAsText(file);
-    }
-
-    // Custom CSV parser to handle quotes and commas
-    function parseCSV(text) {
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
-        const result = [];
-        
-        // Skip header (i=1)
-        for (let i = 1; i < lines.length; i++) {
-            const row = [];
-            let current = "";
-            let inQuotes = false;
-            
-            for (let char of lines[i]) {
-                if (char === '"') inQuotes = !inQuotes;
-                else if (char === ',' && !inQuotes) {
-                    row.push(current.trim());
-                    current = "";
-                } else {
-                    current += char;
-                }
-            }
-            row.push(current.trim());
-            result.push(row);
-        }
-        return result;
     }
 
     async function refreshData() {
@@ -178,12 +115,58 @@
                 <td>${row.instructor || '-'}</td>
                 <td>${row.payment_type || 'Free'}</td>
                 <td class="max-w-[200px] truncate text-slate-400">${row.comments || '-'}</td>
-                <td><button onclick="deleteRow(${row.id})" class="text-red-500">Delete</button></td>
+                <td class="flex gap-4">
+                    <button onclick="startEdit(${JSON.stringify(row).replace(/"/g, '&quot;')})" class="text-blue-500 hover:text-blue-700 transition-colors" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </button>
+                    <button onclick="deleteRow(${row.id})" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </td>
             </tr>
         `).join('');
     }
 
-    async function insertPlan() {
+    function startEdit(row) {
+        // Scroll to form
+        document.getElementById('registrationForm').scrollIntoView({ behavior: 'smooth' });
+        
+        // Populate fields
+        document.getElementById('edit_id').value = row.id;
+        document.getElementById('p_name').value = row.workshop_name;
+        document.getElementById('p_date').value = row.date || '';
+        document.getElementById('p_region').value = row.region;
+        document.getElementById('p_owner').value = row.owner;
+        document.getElementById('p_instructor').value = row.instructor || '';
+        document.getElementById('p_type').value = row.payment_type;
+        document.getElementById('p_comments').value = row.comments || '';
+
+        // UI Changes
+        document.getElementById('formTitle').textContent = "Update Workshop Plan";
+        document.getElementById('mainActionBtn').textContent = "Update Plan";
+        document.getElementById('mainActionBtn').classList.add('edit-mode');
+        document.getElementById('cancelEdit').classList.remove('hidden');
+    }
+
+    function resetForm() {
+        document.getElementById('edit_id').value = "";
+        document.getElementById('p_name').value = "";
+        document.getElementById('p_date').value = "";
+        document.getElementById('p_instructor').value = "";
+        document.getElementById('p_comments').value = "";
+        
+        document.getElementById('formTitle').textContent = "Register Workshop Plan";
+        document.getElementById('mainActionBtn').textContent = "Save Plan";
+        document.getElementById('mainActionBtn').classList.remove('edit-mode');
+        document.getElementById('cancelEdit').classList.add('hidden');
+    }
+
+    async function handleSave() {
+        const id = document.getElementById('edit_id').value;
         const payload = {
             workshop_name: document.getElementById('p_name').value,
             date: document.getElementById('p_date').value || null,
@@ -193,15 +176,78 @@
             payment_type: document.getElementById('p_type').value,
             comments: document.getElementById('p_comments').value
         };
-        const { error } = await _supabase.from('workshop_plans').insert([payload]);
-        if (error) showToast(error.message, 'error');
-        else { showToast('Saved!'); refreshData(); }
+
+        if (!payload.workshop_name) return showToast("Workshop name is required", "error");
+
+        let result;
+        if (id) {
+            // Update existing
+            result = await _supabase.from('workshop_plans').update(payload).eq('id', id);
+        } else {
+            // Insert new
+            result = await _supabase.from('workshop_plans').insert([payload]);
+        }
+
+        if (result.error) {
+            showToast(result.error.message, 'error');
+        } else {
+            showToast(id ? 'Updated Successfully!' : 'Saved Successfully!');
+            resetForm();
+            refreshData();
+        }
     }
 
     async function deleteRow(id) {
-        if(!confirm('Delete?')) return;
-        await _supabase.from('workshop_plans').delete().eq('id', id);
-        refreshData();
+        if(!confirm('Are you sure you want to delete this plan?')) return;
+        const { error } = await _supabase.from('workshop_plans').delete().eq('id', id);
+        if (error) showToast(error.message, 'error');
+        else {
+            showToast('Deleted successfully');
+            refreshData();
+        }
+    }
+
+    // ── BULK UPLOAD LOGIC remains same ──
+    function parseCSV(text) {
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+        const result = [];
+        for (let i = 1; i < lines.length; i++) {
+            const row = [];
+            let current = "";
+            let inQuotes = false;
+            for (let char of lines[i]) {
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { row.push(current.trim()); current = ""; }
+                else { current += char; }
+            }
+            row.push(current.trim());
+            result.push(row);
+        }
+        return result;
+    }
+
+    async function handleBulkUpload(tableName, input, columns) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const text = e.target.result;
+                const rows = parseCSV(text);
+                const payload = rows.map(row => {
+                    let obj = {};
+                    columns.forEach((col, i) => { obj[col] = row[i] || null; });
+                    return obj;
+                });
+                const { error } = await _supabase.from(tableName).insert(payload);
+                if (error) throw error;
+                showToast(`Saved ${payload.length} rows.`);
+                refreshData();
+            } catch (err) {
+                showToast("Error: " + err.message, "error");
+            } finally { input.value = ""; }
+        };
+        reader.readAsText(file);
     }
 </script>
 
