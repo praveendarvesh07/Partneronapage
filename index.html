@@ -140,6 +140,7 @@
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
     let charts = {};
 
+    // Column names must match your Supabase Table Column Names exactly
     const plansColumns = ['workshop_name','date','month','region','quarter', 'owner', 'instructor', 'payment_type', 'comments'];
 
     // ── INITIALIZATION ──────────────────────────────────────
@@ -162,6 +163,73 @@
                 document.getElementById(target).classList.add('active');
             });
         });
+    }
+
+    // ── CSV BULK UPLOAD LOGIC ───────────────────────────────
+    async function handleBulkUpload(tableName, input, columns) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const text = e.target.result;
+            const rows = parseCSV(text);
+            
+            if (rows.length === 0) {
+                showToast("CSV is empty or invalid", "error");
+                return;
+            }
+
+            // Show progress bar
+            const progress = document.getElementById('plansProgress');
+            const fill = document.getElementById('plansProgressFill');
+            if(progress) progress.style.display = 'block';
+
+            // Convert array of arrays to array of objects
+            const payload = rows.map(row => {
+                let obj = {};
+                columns.forEach((col, index) => {
+                    obj[col] = row[index] || null;
+                });
+                return obj;
+            });
+
+            const { error } = await _supabase.from(tableName).insert(payload);
+
+            if (error) {
+                showToast(error.message, "error");
+            } else {
+                showToast(`Successfully uploaded ${payload.length} records!`);
+                refreshData();
+            }
+
+            if(progress) progress.style.display = 'none';
+            input.value = ''; // Reset input
+        };
+        reader.readAsText(file);
+    }
+
+    function parseCSV(text) {
+        const lines = text.split(/\r?\n/);
+        // Assuming first row is header, so we skip it with slice(1)
+        return lines.slice(1)
+            .filter(line => line.trim() !== '')
+            .map(line => {
+                // This regex handles commas inside quotes (e.g., "Field, with comma")
+                const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                return matches ? matches.map(m => m.replace(/^"|"$/g, '').trim()) : [];
+            });
+    }
+
+    function downloadTemplate(type) {
+        const csvContent = "data:text/csv;charset=utf-8," + plansColumns.join(",") + "\n" + 
+                           "Sample Workshop,2024-05-20,May,SEA,Q2,Murtaza,John Doe,Free,Notes here";
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${type}_template.csv`);
+        document.body.appendChild(link);
+        link.click();
     }
 
     // ── UI HELPERS ──────────────────────────────────────────
@@ -211,7 +279,7 @@
                 <td>${row.owner}</td>
                 <td>${row.instructor || '-'}</td>
                 <td><span class="px-2 py-1 rounded text-[10px] ${row.payment_type === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${row.payment_type || 'Free'}</span></td>
-                <td class="max-w-[150px] truncate italic text-slate-400" title="${row.comments || ''}">${row.comments || '-'}</td>
+                <td class="max-w-[1500px] truncate italic text-slate-400" title="${row.comments || ''}">${row.comments || '-'}</td>
                 <td><button onclick="deleteRow('workshop_plans', ${row.id})" class="text-red-400 hover:text-red-600">Delete</button></td>
             </tr>
         `).join('');
@@ -239,7 +307,6 @@
         if (error) showToast(error.message, 'error');
         else {
             showToast('Plan saved successfully!');
-            // Reset Form
             document.getElementById('p_name').value = "";
             document.getElementById('p_comments').value = "";
             document.getElementById('p_instructor').value = "";
@@ -278,6 +345,7 @@
 
     function downloadData(table, columns, filename) {
         showToast('Exporting ' + filename + '...');
+        // Standard CSV export logic could be added here if needed
     }
 </script>
 </body>
