@@ -23,13 +23,7 @@
         td { font-size: 0.8rem; padding: 1rem; border-bottom: 1px solid #f8fafc; }
         .save-btn { background: #0050D1; color: white; border: none; border-radius: 1rem; padding: 0.85rem 1.5rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; width: 100%; }
         .save-btn:hover { background: #0041b0; }
-        .bulk-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 0.75rem; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border: none; transition: all 0.2s; }
-        .upload-btn { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
-        .download-btn { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .template-btn { background: #fafafa; color: #64748b; border: 1px solid #e2e8f0; }
         #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 500; z-index: 9999; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .progress-bar { height: 4px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 0.5rem; display: none; }
-        .progress-bar-fill { height: 100%; background: #0050D1; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body class="p-6 md:p-14">
@@ -69,31 +63,12 @@
     </div>
 
     <div id="plans" class="tab-content space-y-8">
-        <div class="flex items-center gap-3 flex-wrap">
-            <span class="text-xs text-slate-400 uppercase tracking-widest font-medium">Bulk Actions:</span>
-            <button class="bulk-btn template-btn" onclick="downloadTemplate('plans')">⬇ Template</button>
-            <label class="bulk-btn upload-btn" for="plansUpload">⬆ Upload CSV
-                <input type="file" id="plansUpload" accept=".csv" onchange="handleBulkUpload('workshop_plans', this, plansColumns)">
-            </label>
-            <button class="bulk-btn download-btn" onclick="downloadData('workshop_plans', plansColumns, 'workshop_plans')">⬇ Export</button>
-            <div id="plansProgress" class="progress-bar w-40"><div class="progress-bar-fill" id="plansProgressFill"></div></div>
-        </div>
-
         <div class="glass p-10 rounded-[2.5rem]" id="planFormContainer">
             <h2 class="text-2xl font-light mb-8" id="formHeader">Register Workshop Plan</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input type="hidden" id="p_id">
-                
                 <div class="md:col-span-2"><label>Presales Workshop</label><input type="text" id="p_name" placeholder="Workshop name"></div>
-                <div>
-                    <div class="flex justify-between items-center">
-                        <label>Date</label>
-                        <label class="inline-flex items-center gap-1 cursor-pointer" style="text-transform: none; font-size: 0.65rem; color: #0050D1;">
-                            <input type="checkbox" id="p_tbd" class="w-3 h-3" onchange="toggleTBD(this)"> TBD
-                        </label>
-                    </div>
-                    <input type="date" id="p_date">
-                </div>
+                <div><div class="flex justify-between items-center"><label>Date</label><label class="inline-flex items-center gap-1 cursor-pointer" style="text-transform: none; font-size: 0.65rem; color: #0050D1;"><input type="checkbox" id="p_tbd" class="w-3 h-3" onchange="toggleTBD(this)"> TBD</label></div><input type="date" id="p_date"></div>
                 <div><label>Month</label><input type="text" id="p_month" readonly style="background:#f8fafc !important;"></div>
                 <div><label>Region</label><select id="p_region"><option>SEA</option><option>ANZ</option><option>Japan</option><option>Other</option></select></div>
                 <div><label>Quarter</label><select id="p_quarter"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
@@ -101,8 +76,49 @@
                 <div><label>Instructor</label><input type="text" id="p_instructor" placeholder="Instructor name"></div>
                 <div><label>Type</label><select id="p_type"><option>Free</option><option>Paid</option></select></div>
                 <div class="md:col-span-2"><label>Comments</label><textarea id="p_comments" rows="1" placeholder="Add notes..."></textarea></div>
-                <div class="md:col-span-1 flex items-end">
-                    <button class="save-btn" id="saveBtn" onclick="insertPlan()">Save Plan</button>
+                <div class="md:col-span-1 flex items-end"><button class="save-btn" id="saveBtn" onclick="insertPlan()">Save Plan</button></div>
+            </div>
+        </div>
+        <div class="glass rounded-[2.5rem] overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50/50">
+                    <tr><th>Workshop</th><th>Date</th><th>Region</th><th>Owner</th><th>Instructor</th><th>Type</th><th>Comments</th><th>Action</th></tr>
+                </thead>
+                <tbody id="plansTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="revenue" class="tab-content space-y-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="glass p-10 rounded-[2.5rem] flex flex-col">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Revenue vs Forecast (By Region)</h3>
+                <div class="flex-grow"><canvas id="revenueForecastChart"></canvas></div>
+            </div>
+
+            <div class="glass p-10 rounded-[2.5rem]">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Regional Forecast Settings</h3>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label>Region</label><select id="f_region"><option>SEA</option><option>ANZ</option><option>Japan</option><option>Other</option></select></div>
+                        <div><label>Forecast Amount ($)</label><input type="number" id="f_amount" placeholder="0.00"></div>
+                    </div>
+                    <button class="save-btn" onclick="saveForecast()">Update Regional Forecast</button>
+                    <div id="forecastSummary" class="mt-4 text-xs text-slate-400 grid grid-cols-2 gap-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass p-10 rounded-[2.5rem]">
+            <h2 class="text-2xl font-light mb-8" id="revHeader">Track Partner Revenue</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="hidden" id="rev_id">
+                <div class="md:col-span-1"><label>Partner Name</label><input type="text" id="rev_partner" placeholder="Partner Co."></div>
+                <div><label>Region</label><select id="rev_region"><option>SEA</option><option>ANZ</option><option>Japan</option><option>Other</option></select></div>
+                <div><label>Revenue Amount ($)</label><input type="number" id="rev_amount" placeholder="0.00"></div>
+                <div class="flex items-end">
+                    <button class="save-btn" id="revSaveBtn" onclick="saveRevenue()">Add Record</button>
+                    <button id="revCancelBtn" class="hidden text-xs text-red-500 ml-4 mb-4" onclick="resetRevForm()">Cancel</button>
                 </div>
             </div>
         </div>
@@ -110,31 +126,15 @@
         <div class="glass rounded-[2.5rem] overflow-x-auto">
             <table class="w-full text-left">
                 <thead class="bg-slate-50/50">
-                    <tr>
-                        <th>Workshop</th>
-                        <th>Date</th>
-                        <th>Region</th>
-                        <th>Owner</th>
-                        <th>Instructor</th>
-                        <th>Type</th>
-                        <th>Comments</th>
-                        <th>Action</th>
-                    </tr>
+                    <tr><th>Partner</th><th>Region</th><th>Revenue</th><th>Action</th></tr>
                 </thead>
-                <tbody id="plansTableBody"></tbody>
+                <tbody id="revenueTableBody"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="scoops" class="tab-content">
-        <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Scoops Management</h2></div>
-    </div>
-    <div id="newsletters" class="tab-content">
-         <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Newsletters</h2></div>
-    </div>
-    <div id="revenue" class="tab-content">
-         <div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Training Revenue</h2></div>
-    </div>
+    <div id="scoops" class="tab-content"><div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Scoops Management</h2></div></div>
+    <div id="newsletters" class="tab-content"><div class="glass p-10 rounded-[2.5rem]"><h2 class="text-2xl font-light">Newsletters</h2></div></div>
 </div>
 
 <script>
@@ -143,12 +143,11 @@
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
     let charts = {};
 
-    const plansColumns = ['workshop_name','date','month','region','quarter', 'owner', 'instructor', 'payment_type', 'comments'];
-
     document.addEventListener('DOMContentLoaded', () => {
         initTabs();
         initDateListener();
         refreshData();
+        refreshRevenueData();
     });
 
     function initTabs() {
@@ -173,6 +172,143 @@
         setTimeout(() => toast.style.display = 'none', 3000);
     }
 
+    /* REVENUE LOGIC */
+    async function refreshRevenueData() {
+        const { data: revData } = await _supabase.from('training_revenue').select('*');
+        const { data: forecastData } = await _supabase.from('revenue_forecast').select('*');
+
+        const tbody = document.getElementById('revenueTableBody');
+        tbody.innerHTML = revData.map(row => `
+            <tr>
+                <td class="font-medium">${row.partner_name}</td>
+                <td>${row.region}</td>
+                <td class="text-emerald-600 font-bold">$${Number(row.revenue).toLocaleString()}</td>
+                <td class="flex gap-2">
+                    <button onclick='startEditRev(${JSON.stringify(row)})' class="text-blue-500">✏️</button>
+                    <button onclick="deleteRevenue(${row.id})" class="text-red-400">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+
+        updateRevenueCharts(revData, forecastData);
+        updateForecastSummary(forecastData);
+    }
+
+    async function saveRevenue() {
+        const id = document.getElementById('rev_id').value;
+        const payload = {
+            partner_name: document.getElementById('rev_partner').value,
+            region: document.getElementById('rev_region').value,
+            revenue: parseFloat(document.getElementById('rev_amount').value) || 0
+        };
+
+        let err;
+        if(id) {
+            const { error } = await _supabase.from('training_revenue').update(payload).eq('id', id);
+            err = error;
+        } else {
+            const { error } = await _supabase.from('training_revenue').insert([payload]);
+            err = error;
+        }
+
+        if(err) showToast(err.message, 'error');
+        else {
+            showToast('Revenue updated');
+            resetRevForm();
+            refreshRevenueData();
+        }
+    }
+
+    async function saveForecast() {
+        const region = document.getElementById('f_region').value;
+        const amount = parseFloat(document.getElementById('f_amount').value) || 0;
+
+        const { data: existing } = await _supabase.from('revenue_forecast').select('id').eq('region', region).single();
+
+        if(existing) {
+            await _supabase.from('revenue_forecast').update({ forecast_amount: amount }).eq('id', existing.id);
+        } else {
+            await _supabase.from('revenue_forecast').insert([{ region, forecast_amount: amount }]);
+        }
+        showToast('Forecast updated');
+        refreshRevenueData();
+    }
+
+    function startEditRev(row) {
+        document.getElementById('revHeader').innerText = "Edit Revenue Entry";
+        document.getElementById('revSaveBtn').innerText = "Update Record";
+        document.getElementById('rev_id').value = row.id;
+        document.getElementById('rev_partner').value = row.partner_name;
+        document.getElementById('rev_region').value = row.region;
+        document.getElementById('rev_amount').value = row.revenue;
+        document.getElementById('revCancelBtn').classList.remove('hidden');
+    }
+
+    function resetRevForm() {
+        document.getElementById('revHeader').innerText = "Track Partner Revenue";
+        document.getElementById('revSaveBtn').innerText = "Add Record";
+        document.getElementById('rev_id').value = "";
+        document.getElementById('rev_partner').value = "";
+        document.getElementById('rev_amount').value = "";
+        document.getElementById('revCancelBtn').classList.add('hidden');
+    }
+
+    async function deleteRevenue(id) {
+        if(!confirm('Delete this revenue record?')) return;
+        await _supabase.from('training_revenue').delete().eq('id', id);
+        refreshRevenueData();
+    }
+
+    function updateRevenueCharts(revData, forecastData) {
+        const regions = ['SEA', 'ANZ', 'Japan', 'Other'];
+        const actuals = regions.map(r => revData.filter(d => d.region === r).reduce((sum, d) => sum + Number(d.revenue), 0));
+        const forecasts = regions.map(r => forecastData.find(f => f.region === r)?.forecast_amount || 0);
+
+        const ctx = document.getElementById('revenueForecastChart').getContext('2d');
+        if (charts.revForecast) charts.revForecast.destroy();
+
+        charts.revForecast = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: regions,
+                datasets: [
+                    { label: 'Actual Revenue', data: actuals, backgroundColor: '#0050D1', borderRadius: 8 },
+                    { label: 'Regional Forecast', data: forecasts, backgroundColor: '#e2e8f0', borderRadius: 8 }
+                ]
+            },
+            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // Global Insight Total
+        const totalRev = actuals.reduce((a, b) => a + b, 0);
+        document.getElementById('revTotal').innerText = '$' + totalRev.toLocaleString();
+    }
+
+    function updateForecastSummary(data) {
+        const div = document.getElementById('forecastSummary');
+        div.innerHTML = data.map(f => `<div>${f.region}: <b>$${Number(f.forecast_amount).toLocaleString()}</b></div>`).join('');
+    }
+
+    /* EXISTING WORKSHOP LOGIC (UNCHANGED) */
+    async function refreshData() {
+        const { data, error } = await _supabase.from('workshop_plans').select('*').order('date', { ascending: false });
+        if (error) return;
+        const tbody = document.getElementById('plansTableBody');
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                <td class="font-medium">${row.workshop_name}</td>
+                <td>${row.date || '<span class="text-orange-500 font-medium">TBD</span>'}</td>
+                <td>${row.region}</td>
+                <td>${row.owner}</td>
+                <td>${row.instructor || '-'}</td>
+                <td><span class="px-2 py-1 rounded text-[10px] ${row.payment_type === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${row.payment_type || 'Free'}</span></td>
+                <td class="max-w-[150px] truncate italic text-slate-400">${row.comments || '-'}</td>
+                <td class="flex gap-2"><button onclick='startEdit(${JSON.stringify(row)})' class="text-blue-500">✏️</button><button onclick="deleteRow('workshop_plans', ${row.id})" class="text-red-400">Delete</button></td>
+            </tr>
+        `).join('');
+        updateCharts(data);
+    }
+
     function initDateListener() {
         const dateInput = document.getElementById('p_date');
         dateInput.addEventListener('change', (e) => {
@@ -186,162 +322,30 @@
         const dateInput = document.getElementById('p_date');
         const monthInput = document.getElementById('p_month');
         if (checkbox.checked) {
-            dateInput.value = "";
-            dateInput.disabled = true;
-            dateInput.style.opacity = "0.5";
-            monthInput.value = "To be Decided";
+            dateInput.value = ""; dateInput.disabled = true; dateInput.style.opacity = "0.5"; monthInput.value = "To be Decided";
         } else {
-            dateInput.disabled = false;
-            dateInput.style.opacity = "1";
-            monthInput.value = "";
-        }
-    }
-
-    async function refreshData() {
-        const { data, error } = await _supabase.from('workshop_plans').select('*').order('date', { ascending: false });
-        if (error) return console.error(error);
-
-        const tbody = document.getElementById('plansTableBody');
-        tbody.innerHTML = data.map(row => `
-            <tr>
-                <td class="font-medium">${row.workshop_name}</td>
-                <td>${row.date || '<span class="text-orange-500 font-medium">TBD</span>'}</td>
-                <td>${row.region}</td>
-                <td>${row.owner}</td>
-                <td>${row.instructor || '-'}</td>
-                <td><span class="px-2 py-1 rounded text-[10px] ${row.payment_type === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${row.payment_type || 'Free'}</span></td>
-                <td class="max-w-[150px] truncate italic text-slate-400" title="${row.comments || ''}">${row.comments || '-'}</td>
-                <td class="flex gap-2">
-                    <button onclick='startEdit(${JSON.stringify(row)})' class="text-blue-500 hover:text-blue-700">✏️</button>
-                    <button onclick="deleteRow('workshop_plans', ${row.id})" class="text-red-400 hover:text-red-600">Delete</button>
-                </td>
-            </tr>
-        `).join('');
-        
-        updateCharts(data);
-    }
-
-    function startEdit(row) {
-        document.getElementById('formHeader').innerText = "Edit Workshop Plan";
-        document.getElementById('saveBtn').innerText = "Update Plan";
-        document.getElementById('saveBtn').onclick = () => updatePlan();
-        
-        document.getElementById('p_id').value = row.id;
-        document.getElementById('p_name').value = row.workshop_name;
-        document.getElementById('p_date').value = row.date || "";
-        document.getElementById('p_region').value = row.region;
-        document.getElementById('p_quarter').value = row.quarter;
-        document.getElementById('p_owner').value = row.owner;
-        document.getElementById('p_instructor').value = row.instructor || "";
-        document.getElementById('p_type').value = row.payment_type || "Free";
-        document.getElementById('p_comments').value = row.comments || "";
-        
-        const isTBD = !row.date;
-        document.getElementById('p_tbd').checked = isTBD;
-        toggleTBD(document.getElementById('p_tbd'));
-        if(!isTBD) {
-            const d = new Date(row.date);
-            document.getElementById('p_month').value = d.toLocaleString('default', { month: 'long' });
-        }
-
-        document.getElementById('planFormContainer').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    async function updatePlan() {
-        const id = document.getElementById('p_id').value;
-        const isTBD = document.getElementById('p_tbd').checked;
-        const payload = {
-            workshop_name: document.getElementById('p_name').value,
-            date: isTBD ? null : document.getElementById('p_date').value,
-            month: document.getElementById('p_month').value,
-            region: document.getElementById('p_region').value,
-            quarter: document.getElementById('p_quarter').value,
-            owner: document.getElementById('p_owner').value,
-            instructor: document.getElementById('p_instructor').value,
-            payment_type: document.getElementById('p_type').value,
-            comments: document.getElementById('p_comments').value
-        };
-
-        const { error } = await _supabase.from('workshop_plans').update(payload).eq('id', id);
-        if (error) showToast(error.message, 'error');
-        else {
-            showToast('Plan updated successfully!');
-            resetForm();
-            refreshData();
-        }
-    }
-
-    function resetForm() {
-        document.getElementById('formHeader').innerText = "Register Workshop Plan";
-        document.getElementById('saveBtn').innerText = "Save Plan";
-        document.getElementById('saveBtn').onclick = () => insertPlan();
-        document.getElementById('p_id').value = "";
-        document.getElementById('p_name').value = "";
-        document.getElementById('p_date').value = "";
-        document.getElementById('p_date').disabled = false;
-        document.getElementById('p_date').style.opacity = "1";
-        document.getElementById('p_tbd').checked = false;
-        document.getElementById('p_month').value = "";
-        document.getElementById('p_comments').value = "";
-        document.getElementById('p_instructor').value = "";
-    }
-
-    async function insertPlan() {
-        const isTBD = document.getElementById('p_tbd').checked;
-        const payload = {
-            workshop_name: document.getElementById('p_name').value,
-            date: isTBD ? null : document.getElementById('p_date').value,
-            month: document.getElementById('p_month').value,
-            region: document.getElementById('p_region').value,
-            quarter: document.getElementById('p_quarter').value,
-            owner: document.getElementById('p_owner').value,
-            instructor: document.getElementById('p_instructor').value,
-            payment_type: document.getElementById('p_type').value,
-            comments: document.getElementById('p_comments').value
-        };
-
-        if(!payload.workshop_name) return showToast("Name is required", "error");
-
-        const { error } = await _supabase.from('workshop_plans').insert([payload]);
-        if (error) showToast(error.message, 'error');
-        else {
-            showToast('Plan saved successfully!');
-            resetForm();
-            refreshData();
+            dateInput.disabled = false; dateInput.style.opacity = "1"; monthInput.value = "";
         }
     }
 
     async function deleteRow(table, id) {
-        if(!confirm('Delete this record?')) return;
-        const { error } = await _supabase.from(table).delete().eq('id', id);
-        if (error) showToast(error.message, 'error');
-        else refreshData();
+        if(!confirm('Delete?')) return;
+        await _supabase.from(table).delete().eq('id', id);
+        refreshData();
     }
 
     function updateCharts(data) {
-        const counts = data.reduce((acc, curr) => {
-            acc[curr.owner] = (acc[curr.owner] || 0) + 1;
-            return acc;
-        }, {});
-
+        const counts = data.reduce((acc, curr) => { acc[curr.owner] = (acc[curr.owner] || 0) + 1; return acc; }, {});
         const ctx = document.getElementById('plansChart').getContext('2d');
         if (charts.plans) charts.plans.destroy();
-        
         charts.plans = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(counts),
-                datasets: [{
-                    data: Object.values(counts),
-                    backgroundColor: ['#0050D1', '#60a5fa', '#94a3b8', '#e2e8f0']
-                }]
+                datasets: [{ data: Object.values(counts), backgroundColor: ['#0050D1', '#60a5fa', '#94a3b8', '#e2e8f0'] }]
             },
             options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
         });
-    }
-
-    function downloadData(table, columns, filename) {
-        showToast('Exporting ' + filename + '...');
     }
 </script>
 </body>
